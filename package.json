@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "main": "dist-electron/main/index.js",
   "description": "video-editor",
-  "author": "JoshuaZhengsurp",
+  "author": "JoshuaZhengsurp <3107641910@qq.com>",
   "license": "MIT",
   "private": true,
   "debug": {

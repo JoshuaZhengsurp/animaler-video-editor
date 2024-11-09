@@ -29,6 +29,12 @@
     ],
     "artifactName": "${productName}_${version}.${ext}"
   },
+  "linux": {
+    "artifactName": "${productName}_${version}.${ext}",
+    "target": [
+      "deb",
+    ]
+  },
   "nsis": {
     "oneClick": false,
     "perMachine": false,

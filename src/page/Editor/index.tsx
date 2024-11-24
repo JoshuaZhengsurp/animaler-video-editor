@@ -1,8 +1,8 @@
 import React from 'react';
 
-import Banner from './module/Banner';
-import Sider from './module/Sider';
-import VideoEditor from './module/VideoEditor';
+import Banner from './Banner';
+import Sider from './Sider';
+import VideoEditor from './VideoEditor';
 
 import style from './index.module.scss';
 

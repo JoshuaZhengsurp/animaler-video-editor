@@ -1,0 +1,78 @@
+.banner-left {
+    .banner-ico {
+        transform: translateY(-2px);
+    }
+    padding: 0 0.5rem;
+    // min-width: 16rem;
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+}
+
+.banner-title {
+    width: 8rem;
+    height: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+    position: relative;
+    &::after {
+        width: 100%;
+        position: absolute;
+        content: '';
+        box-sizing: border-box;
+        left: 0px;
+        bottom: 2px;
+        right: 0px;
+        height: 2px;
+        border-bottom-left-radius: 1.2rem;
+        border-bottom-right-radius: 1.2rem;
+        border-bottom: 2px solid #892fff;
+        opacity: 0;
+        transition: opacity 0.5s ease;
+    }
+
+    &:focus-within::after {
+        opacity: 1; // 显示下边框
+    }
+    input {
+        width: 100%;
+        box-sizing: inherit;
+        height: 2.3rem;
+        margin: auto;
+        padding: 0.25rem 0.5rem;
+        border-style: none;
+        border-radius: 0.3rem;
+        font-size: 1rem;
+        background-color: #272836;
+
+        text-align: center;
+
+        &:focus {
+            outline: none;
+        }
+    }
+}
+
+.banner-button {
+    box-sizing: border-box;
+    background-color: #892fff;
+    height: 2.3rem;
+    border-radius: 0.3rem;
+    padding: 0.5rem 1rem;
+}
+.banner-export {
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin: 0 0.5rem;
+    // min-width: 5rem;
+
+    gap: 0.3rem;
+    display: flex;
+    justify-content: space-around;
+
+    &-svg {
+        position: relative;
+        top: -1px;
+    }
+}
+// }

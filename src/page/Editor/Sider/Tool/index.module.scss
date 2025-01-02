@@ -1,0 +1,15 @@
+.tool-item {
+    height: 3.5rem;
+    width: 100%;
+
+    font-size: 14px;
+    text-align: center;
+    line-height: 3.5rem;
+
+    color: #ababc0;
+
+    &__light {
+        color: #fff;
+        background-color: #313242;
+    }
+}

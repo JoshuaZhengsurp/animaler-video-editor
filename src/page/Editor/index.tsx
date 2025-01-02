@@ -2,7 +2,7 @@ import React from 'react';
 
 import Banner from './Banner';
 import Sider from './Sider';
-import VideoEditor from './VideoEditor';
+import VideoEditor from './Video';
 
 import style from './index.module.scss';
 

@@ -5,6 +5,9 @@ interface SiderStore extends Partial<ToolConfig> {
     setToolConfig: (toolConfig: ToolConfig) => void;
 }
 
+/**
+ * @description 侧边工具栏配置
+ */
 export const useSiderStore = create<SiderStore>(set => ({
     ...initConfig,
     setToolConfig: toolConfig => {

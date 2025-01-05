@@ -1,6 +1,6 @@
-import { CameraVideo } from '@styled-icons/bootstrap/CameraVideo';
-import { CameraVideoFill } from '@styled-icons/bootstrap/CameraVideoFill';
-import { ReactElement } from 'react';
+// import { CameraVideo } from '@styled-icons/bootstrap/CameraVideo';
+// import { CameraVideoFill } from '@styled-icons/bootstrap/CameraVideoFill';
+// import { ReactElement } from 'react';
 
 import Media from './Media';
 

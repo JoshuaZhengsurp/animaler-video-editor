@@ -44,7 +44,11 @@
     ]
   },
   "dependencies": {
-    "electron-updater": "^6.1.8"
+    "@ffmpeg/core": "^0.12.6",
+    "@ffmpeg/ffmpeg": "^0.12.10",
+    "@ffmpeg/util": "^0.12.1",
+    "electron-updater": "^6.1.8",
+    "zustand": "^5.0.2"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.5.0",

@@ -5,6 +5,7 @@ import style from './index.module.scss';
 import { ffmpegManager } from '@/utils/ffmpeg';
 import { useStateStore } from '@/store/useStateStore';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { IS_SHOW_TRANCODE_STATUS } from '@/utils/const';
 
 // const { dialog } = require('electron');
 
@@ -19,6 +20,10 @@ export default function Media() {
 
     const filePathRef = useRef<string>('');
 
+    /**
+     * @todo ffmpeg 解码 输出
+     * @todo videoStore 修改数据状态
+     */
     const transcode = async () => {
         try {
             console.log('ffmpeg', ffmpegRef.current);
@@ -115,17 +120,15 @@ export default function Media() {
             <div className={style['media-import']} onClick={importMediaFile}>
                 导入媒体
             </div>
+            {IS_SHOW_TRANCODE_STATUS && <p ref={messageRef}></p>}
             <div className={style['media-list']}>
-                {!isLoading ? (
+                {!isLoading && (
                     <>
                         {/* 播放时长&内容首帧&hover播放&画质压缩 */}
-                        <video ref={videoRef} controls />
+                        <video ref={videoRef} />
                         <br />
                         <button onClick={transcode}>Transcode avi to mp4</button>
-                        <p ref={messageRef}></p>
                     </>
-                ) : (
-                    <div>loading...</div>
                 )}
             </div>
         </div>

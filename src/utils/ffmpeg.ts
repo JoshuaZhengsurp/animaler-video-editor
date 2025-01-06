@@ -16,12 +16,13 @@ class FFmpegManager {
         this.ffmpeg = new FFmpeg();
     }
 
+    /* 初始配置文件 */
     async init() {
         this.isLogShow = import.meta.env.VITE_APP_FFMPEG_LOG === 'true' && IS_SHOW_FFMPEG_LOG;
 
         try {
-            // const baseURL = import.meta.env.VITE_APP_BASE_FFMPEG_URL;
-            const baseURL = 'https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/esm';
+            const baseURL = import.meta.env.VITE_APP_BASE_FFMPEG_URL;
+            // const baseURL = 'https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/esm';
 
             if (this.isLogShow) {
                 this.showLog();
@@ -38,12 +39,16 @@ class FFmpegManager {
         }
     }
 
+    /* 读取媒体文件 */
     async readMediaFile(file: File) {
         const data = await file.arrayBuffer();
         const fileName = file.name;
         await this.ffmpeg.writeFile(fileName, new Uint8Array(data));
         return fileName;
     }
+
+    /* 转码，例如mp4 */
+    async transcode() {}
 
     async convertToMp3(inputFileName: string, outputFileName: string) {
         try {

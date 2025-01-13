@@ -1,14 +1,21 @@
-.video-cut-content {
+.video-editor-content {
     height: 100%;
     width: 100%;
     // padding: 0.5rem;
 }
 
-.video-curvas-content {
+.video-player-content {
     width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    padding: 3rem 1rem 1.5rem;
+    box-sizing: border-box;
+
+    .video-player-control {
+        // position: absolute;
+        width: 100%;
+        display: flex;
+        justify-content: center ;
+        align-items: center;
+    }
 }
 
 .cut-content {

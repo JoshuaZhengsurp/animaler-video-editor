@@ -6,8 +6,9 @@ import { nanoid } from 'nanoid';
 
 /**
  * @description
- * 对ffmpeg封装
+ * 对ffmpeg.wasm封装
  */
+
 class FFmpegManager {
     ffmpeg: FFmpeg;
 
@@ -53,11 +54,14 @@ class FFmpegManager {
 
     /* 转码，例如mp4 */
     async transcode(options: Partial<TranCodeOptions>) {
-        const videoURL = options.uri;
+        this.currentTranVideoId = nanoid(9);
+        const {
+            inputFile = `${this.currentTranVideoId}_input.avi`,
+            outputFile = `${this.currentTranVideoId}_output.mp4`,
+        } = options;
         const ffmpeg = this.ffmpeg;
 
-        this.currentTranVideoId = nanoid(9);
-        console.log('currentTranVideoId', this.currentTranVideoId);
+        // console.log('currentTranVideoId', this.currentTranVideoId);
 
         try {
             await ffmpeg.deleteFile('input.avi');
@@ -67,16 +71,20 @@ class FFmpegManager {
         }
 
         try {
-            const videoData = await fetchFile(videoURL);
-            await ffmpeg.writeFile('input.avi', videoData);
-
+            if (options.type === 'LOCAL') {
+                await ffmpeg.writeFile(inputFile, options.uri as Uint8Array<ArrayBuffer>);
+            } else {
+                const videoURL = options.uri as string;
+                const videoData = await fetchFile(videoURL);
+                await ffmpeg.writeFile(inputFile, videoData);
+            }
             console.log('[log]', '开始转码...');
             this.tranCoding = true;
 
             await ffmpeg.exec(
                 [
                     '-i',
-                    'input.avi',
+                    inputFile,
                     '-c:v',
                     'libx264',
                     '-preset',
@@ -92,14 +100,14 @@ class FFmpegManager {
                     '-movflags',
                     '+faststart',
                     '-y',
-                    'output.mp4',
+                    outputFile,
                 ],
                 1200000,
             );
 
-            const fileData = await ffmpeg.readFile('output.mp4');
+            const fileData = await ffmpeg.readFile(outputFile);
             const data = new Uint8Array(fileData as ArrayBuffer);
-            return { data };
+            return { data, id: this.currentTranVideoId, outputFile };
         } finally {
             this.tranCoding = false;
             this.currentTranVideoId = '';
@@ -172,22 +180,3 @@ class FFmpegManager {
 const ffmpegManager = new FFmpegManager();
 
 export { ffmpegManager };
-
-/**
- * @description FFmpeg 转码配置项
- * @interface TranCodeOptions
- * @property {string} type - 转码类型
- * @property {string} uri - 文件URI
- * @property {string} inputFileName - 输入文件名
- * @property {Array<string> | string} execCmd - 执行命令
- * @property {string} outputFile - 输出文件名
- * @property {unknown} [propName: string] - 其他属性
- */
-interface TranCodeOptions {
-    type: string;
-    uri: string;
-    inputFileName: string;
-    execCmd: Array<string> | string;
-    outputFile: string;
-    [propName: string]: unknown;
-}

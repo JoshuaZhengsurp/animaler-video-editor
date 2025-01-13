@@ -16,7 +16,7 @@ export default function Media() {
     const { isLoading } = useStateStore();
     const { videos, addVideo } = useVideoStore();
 
-    const filePathRef = useRef<string>('');
+    const fileInfoRef = useRef<Record<string, any> | null>(null);
 
     /**
      * @todo ffmpeg 解码 输出
@@ -51,13 +51,18 @@ export default function Media() {
          * 3. 将blob二级制传递给transcode函数
          */
         console.log('hell0');
-        filePathRef.current = (await window.ipcRenderer.invoke('dialog:openFile')) as string;
-        // console.log(filepath);
-
-        addVideo('https://raw.githubusercontent.com/ffmpegwasm/testdata/master/video-15s.avi');
-
-        // transcode();
-        // dialog.showOpenDialog({ properties: ['openFile'] });
+        fileInfoRef.current = (await window.ipcRenderer.invoke('dialog:openFile')) as Record<
+            string,
+            any
+        >;
+        // console.log(fileInfoRef);
+        if (fileInfoRef.current?.data) {
+            await addVideo({
+                data: fileInfoRef.current?.data,
+                type: 'LOCAL',
+                origin: fileInfoRef.current?.path,
+            });
+        }
     };
 
     return (

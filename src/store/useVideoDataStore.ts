@@ -8,30 +8,43 @@ export interface VideoItem {
     data?: any;
     duration?: number;
     thumbnail?: string;
+    suffix?: string;
     // status: 'idle' | 'processing' | 'done' | 'error';
     // error?: string;
+}
+
+interface VideoInfo {
+    origin: string;
+    type: string;
+    data: Uint8Array<ArrayBuffer>;
 }
 
 interface VideoStore {
     videos: VideoItem[];
     // 操作方法
-    addVideo: (path: string) => Promise<void>;
+    addVideo: (videoInfo: VideoInfo) => Promise<void>;
     removeVideo: (id: string) => void;
     // setCurrentVideo: (id: string | null) => void;
     // updateVideoStatus: (id: string, status: VideoItem['status'], error?: string) => void;
 }
 
-export const useVideoStore = create<VideoStore>(set => ({
+export const useVideoStore = create<VideoStore>((set) => ({
     videos: [],
 
     /**
      * @todo 完善这块逻辑
      */
-    addVideo: async (path: string) => {
+    addVideo: async ({ origin, type, data }: VideoInfo) => {
         try {
-            const fileName = path.split(/[\\/]/).pop() || '';
-            const id = crypto.randomUUID();
+            const fileName = origin.split(/[\\/]/).pop() || '';
+            const fileSuffix = fileName.split('.').pop() || '';
+            // const id = crypto.randomUUID();
 
+            console.log('origin', origin, fileName);
+
+            /**
+             * @todo 视频解码状态描述
+             */
             // 先添加视频项到列表
             // set(state => ({
             //     videos: [
@@ -39,7 +52,7 @@ export const useVideoStore = create<VideoStore>(set => ({
             //         {
             //             id,
             //             name: fileName,
-            //             path,
+            //             path: origin,
             //             status: 'processing',
             //         },
             //     ],
@@ -50,18 +63,23 @@ export const useVideoStore = create<VideoStore>(set => ({
                 await ffmpegManager.init();
             }
 
-            // 处理视频（获取时长、缩略图等）
-            const duration = await ffmpegManager.getVideoDuration(path);
-
-            const { data } = await ffmpegManager.transcode({
-                type: 'URL',
-                uri: path,
+            const {
+                data: transCodeResult,
+                id,
+                outputFile,
+            } = await ffmpegManager.transcode({
+                type,
+                uri: data,
+                inputFile: fileName,
             });
 
-            console.log('data', { id, name: fileName, data, duration, path });
+            console.log('addVideo', id, outputFile);
 
-            set(state => ({
-                videos: [{ id, name: fileName, data, duration, path }, ...state.videos] as VideoItem[],
+            set((state) => ({
+                videos: [
+                    { id, name: fileName, data: transCodeResult, path: origin, suffix: fileSuffix },
+                    ...state.videos,
+                ] as VideoItem[],
             }));
             // 更新视频信息
             // set(state => ({
@@ -80,8 +98,8 @@ export const useVideoStore = create<VideoStore>(set => ({
     },
 
     removeVideo: (id: string) => {
-        set(state => ({
-            videos: state.videos.filter(video => video.id !== id),
+        set((state) => ({
+            videos: state.videos.filter((video) => video.id !== id),
         }));
     },
 

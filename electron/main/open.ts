@@ -10,8 +10,12 @@ async function handleFileOpen() {
     const {canceled, filePaths} = await dialog.showOpenDialog({});
     if(!canceled) {
         console.log(filePaths);
-        return filePaths[0];
-        // return await getVideoData(filePaths[0]);
+        const videoData = await getVideoData(filePaths[0]);
+        // return filePaths[0];
+        return {
+            data: videoData,
+            path: filePaths[0]
+        }
     }
 }
 

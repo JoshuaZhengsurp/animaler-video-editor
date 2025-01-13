@@ -33,17 +33,17 @@ export const useVideoStore = create<VideoStore>(set => ({
             const id = crypto.randomUUID();
 
             // 先添加视频项到列表
-            set(state => ({
-                videos: [
-                    ...state.videos,
-                    {
-                        id,
-                        name: fileName,
-                        path,
-                        status: 'processing',
-                    },
-                ],
-            }));
+            // set(state => ({
+            //     videos: [
+            //         ...state.videos,
+            //         {
+            //             id,
+            //             name: fileName,
+            //             path,
+            //             status: 'processing',
+            //         },
+            //     ],
+            // }));
 
             // 初始化 FFmpeg（如果需要）
             if (!ffmpegManager.isLoading) {
@@ -57,6 +57,8 @@ export const useVideoStore = create<VideoStore>(set => ({
                 type: 'URL',
                 uri: path,
             });
+
+            console.log('data', { id, name: fileName, data, duration, path });
 
             set(state => ({
                 videos: [{ id, name: fileName, data, duration, path }, ...state.videos] as VideoItem[],

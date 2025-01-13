@@ -1,18 +1,16 @@
 import React, { useRef } from 'react';
 
 import style from './index.module.scss';
-import { ffmpegManager } from '@/utils/ffmpeg';
 import { useStateStore } from '@/store/useStateStore';
 import { useVideoStore } from '@/store/useVideoDataStore';
 import { IS_SHOW_TRANCODE_STATUS } from '@/utils/const';
+import MiniVideo from '@/components/VideoPlayer/MiniVideoPlayer';
 
 // const { dialog } = require('electron');
 
 // import { dialog } from 'electron';
 
 export default function Media() {
-    const ffmpegRef = useRef(ffmpegManager);
-    const videoRef = useRef<HTMLVideoElement | null>(null);
     const messageRef = useRef<HTMLParagraphElement | null>(null);
 
     const { isLoading } = useStateStore();
@@ -24,26 +22,26 @@ export default function Media() {
      * @todo ffmpeg 解码 输出
      * @todo videoStore 修改数据状态
      */
-    const transcode = async () => {
-        try {
-            console.log('ffmpeg', ffmpegRef.current);
-            const videoURL = 'https://raw.githubusercontent.com/ffmpegwasm/testdata/master/video-15s.avi';
-            const ffmpeg = ffmpegRef.current;
+    // const transcode = async () => {
+    //     try {
+    //         console.log('ffmpeg', ffmpegRef.current);
+    //         const videoURL = 'https://raw.githubusercontent.com/ffmpegwasm/testdata/master/video-15s.avi';
+    //         const ffmpeg = ffmpegRef.current;
 
-            const { data: transResult } = await ffmpeg.transcode({
-                type: 'URL',
-                uri: videoURL,
-            });
+    //         const { data: transResult } = await ffmpeg.transcode({
+    //             type: 'URL',
+    //             uri: videoURL,
+    //         });
 
-            console.log('videoRef.current', videoRef.current);
-            if (videoRef.current) {
-                console.log('videoRef.current', videoRef.current);
-                videoRef.current.src = URL.createObjectURL(new Blob([transResult.buffer], { type: 'video/mp4' }));
-            }
-        } catch (err) {
-            console.log('err', err);
-        }
-    };
+    //         console.log('videoRef.current', videoRef.current);
+    //         if (videoRef.current) {
+    //             console.log('videoRef.current', videoRef.current);
+    //             videoRef.current.src = URL.createObjectURL(new Blob([transResult.buffer], { type: 'video/mp4' }));
+    //         }
+    //     } catch (err) {
+    //         console.log('err', err);
+    //     }
+    // };
 
     const importMediaFile = async () => {
         /**
@@ -70,18 +68,10 @@ export default function Media() {
             {IS_SHOW_TRANCODE_STATUS && <p ref={messageRef}></p>}
             <div className={style['media-list']}>
                 {/* 播放时长&内容首帧&hover播放&画质压缩 */}
-                {
-                    !isLoading && (videos.map(video => ({
-                        <></>
-                    })))
-                }
-                {/* {!isLoading && (
-                    <>
-                        <video ref={videoRef} />
-                        <br />
-                        <button onClick={transcode}>Transcode avi to mp4</button>
-                    </>
-                )} */}
+                {!isLoading &&
+                    videos.map((video) => (
+                        <MiniVideo key={video.id} videoData={video.data} title={video.name} />
+                    ))}
             </div>
         </div>
     );

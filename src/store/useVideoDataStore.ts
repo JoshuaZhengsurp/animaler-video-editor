@@ -5,57 +5,82 @@ export interface VideoItem {
     id: string;
     name: string;
     path: string;
+    data?: any;
     duration?: number;
     thumbnail?: string;
-    status: 'idle' | 'processing' | 'done' | 'error';
-    error?: string;
+    suffix?: string;
+    // status: 'idle' | 'processing' | 'done' | 'error';
+    // error?: string;
+}
+
+interface VideoInfo {
+    origin: string;
+    type: string;
+    data: Uint8Array<ArrayBuffer>;
 }
 
 interface VideoStore {
     videos: VideoItem[];
-    currentVideoId: string | null;
-    isProcessing: boolean;
     // 操作方法
-    addVideo: (path: string) => Promise<void>;
+    addVideo: (videoInfo: VideoInfo) => Promise<void>;
     removeVideo: (id: string) => void;
     // setCurrentVideo: (id: string | null) => void;
-    updateVideoStatus: (id: string, status: VideoItem['status'], error?: string) => void;
+    // updateVideoStatus: (id: string, status: VideoItem['status'], error?: string) => void;
 }
 
-export const useVideoStore = create<VideoStore>(set => ({
+export const useVideoStore = create<VideoStore>((set) => ({
     videos: [],
-    currentVideoId: null,
-    isProcessing: false,
 
     /**
      * @todo 完善这块逻辑
      */
-    addVideo: async (path: string) => {
+    addVideo: async ({ origin, type, data }: VideoInfo) => {
         try {
-            const fileName = path.split(/[\\/]/).pop() || '';
-            const id = crypto.randomUUID();
+            const fileName = origin.split(/[\\/]/).pop() || '';
+            const fileSuffix = fileName.split('.').pop() || '';
+            // const id = crypto.randomUUID();
 
+            console.log('origin', origin, fileName);
+
+            /**
+             * @todo 视频解码状态描述
+             */
             // 先添加视频项到列表
-            set(state => ({
-                videos: [
-                    ...state.videos,
-                    {
-                        id,
-                        name: fileName,
-                        path,
-                        status: 'processing',
-                    },
-                ],
-            }));
+            // set(state => ({
+            //     videos: [
+            //         ...state.videos,
+            //         {
+            //             id,
+            //             name: fileName,
+            //             path: origin,
+            //             status: 'processing',
+            //         },
+            //     ],
+            // }));
 
             // 初始化 FFmpeg（如果需要）
             if (!ffmpegManager.isLoading) {
                 await ffmpegManager.init();
             }
 
-            // 处理视频（获取时长、缩略图等）
-            const duration = await ffmpegManager.getVideoDuration(path);
+            const {
+                data: transCodeResult,
+                id,
+                outputFile,
+            } = await ffmpegManager.transcode({
+                type,
+                uri: data,
+                inputFile: fileName,
+            });
 
+            console.log('addVideo', id, outputFile);
+
+            set((state) => ({
+                videos: [
+                    { id, name: fileName, data: transCodeResult, path: origin, suffix: fileSuffix },
+                    ...state.videos,
+                ] as VideoItem[],
+            }));
             // 更新视频信息
             // set(state => ({
             //     videos: state.videos.map(video => {
@@ -64,24 +89,23 @@ export const useVideoStore = create<VideoStore>(set => ({
             // }));
         } catch (error) {
             console.error('Failed to add video:', error);
-            set(state => ({
-                videos: state.videos.map(video =>
-                    video.path === path ? { ...video, status: 'error', error: error.message } : video,
-                ),
-            }));
+            // set(state => ({
+            //     videos: state.videos.map(video =>
+            //         video.path === path ? { ...video, status: 'error', error: error.message } : video,
+            //     ),
+            // }));
         }
     },
 
     removeVideo: (id: string) => {
-        set(state => ({
-            videos: state.videos.filter(video => video.id !== id),
-            currentVideoId: state.currentVideoId === id ? null : state.currentVideoId,
+        set((state) => ({
+            videos: state.videos.filter((video) => video.id !== id),
         }));
     },
 
-    updateVideoStatus: (id: string, status: VideoItem['status'], error?: string) => {
-        set(state => ({
-            videos: state.videos.map(video => (video.id === id ? { ...video, status, error } : video)),
-        }));
-    },
+    // updateVideoStatus: (id: string, status: VideoItem['status'], error?: string) => {
+    //     set(state => ({
+    //         videos: state.videos.map(video => (video.id === id ? { ...video, status, error } : video)),
+    //     }));
+    // },
 }));

@@ -29,3 +29,32 @@
 ### 参考竞品
 
 Cicploy
+
+
+```javascript
+src:
+├─assets                //静态资源 
+├─components            // 公共组件
+│  ├─AppIcon
+│  ├─AutoSave
+│  ├─update
+│  └─VideoPlayer
+├─hooks
+├─ipc                   // 与electron node层通信
+├─lib                   // 三方/复杂计算 库
+├─page                  // 页面layout
+│  ├─Editor
+│  │  ├─Banner
+│  │  ├─Sider
+│  │  │  ├─component
+│  │  │  ├─Media
+│  │  │  └─Tool
+│  │  └─Video
+│  │      ├─Control
+│  │      ├─Player
+│  │      └─Track
+│  └─Home
+├─store                 // 集中状态管理
+├─type                  // typescript文件类型
+└─utils                 // 公共函数
+```

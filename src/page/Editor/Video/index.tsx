@@ -3,6 +3,7 @@ import style from './index.module.scss';
 
 import VideoPlayer from './Player';
 import PlayerControl from './Control';
+import Track from './Track';
 
 export default function VideoEditor() {
     const [videoPlayerHeight] = useState(60);
@@ -19,7 +20,7 @@ export default function VideoEditor() {
                 </div>
             </div>
             <div className={style['cut-content']} style={{ height: `${100 - videoPlayerHeight}%` }}>
-                Cut
+                <Track />
             </div>
         </div>
     );

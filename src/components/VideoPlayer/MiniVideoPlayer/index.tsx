@@ -2,7 +2,7 @@ import React, { Fragment, useEffect, useRef, useState } from 'react';
 
 interface IProps {
     videoData: Uint8Array;
-    title: string;
+    title?: string;
 }
 
 export default function MiniVideo(props: IProps) {
@@ -45,7 +45,7 @@ export default function MiniVideo(props: IProps) {
                     component
                 </div> */}
             </div>
-            <div className='w-full m-1 text-xs'>{title}</div>
+            {title && <div className='w-full m-1 text-xs'>{title}</div>}
         </Fragment>
     );
 }

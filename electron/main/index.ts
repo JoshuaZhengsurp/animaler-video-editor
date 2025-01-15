@@ -6,7 +6,7 @@ import os from 'node:os'
 import { update } from './update'
 import { open } from './open';
 
-const require = createRequire(import.meta.url)
+// const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // The built directory structure

@@ -1,7 +1,7 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { IS_SHOW_FFMPEG_LOG, IS_SHOW_TRANCODE_STATUS } from './const';
-import { getMetaDataWithTranMessage } from './common';
+import { getMetaDataWithTranMessage, TransLogProcessState } from './common';
 import { nanoid } from 'nanoid';
 
 /**
@@ -20,6 +20,10 @@ class FFmpegManager {
 
     private tranCoding = false;
     private currentTranVideoId: string = '';
+    private curMetaData: Record<string, any> = {
+        data: this.metadata,
+        last: null,
+    };
 
     constructor() {
         this.ffmpeg = new FFmpeg();
@@ -111,6 +115,7 @@ class FFmpegManager {
         } finally {
             this.tranCoding = false;
             this.currentTranVideoId = '';
+            console.log('result finally', this.metadata);
         }
     }
 
@@ -159,7 +164,41 @@ class FFmpegManager {
         this.isTranCodeShow = IS_SHOW_TRANCODE_STATUS;
 
         const getMetaDataWithLog = ({ message }: { message: string }) => {
-            getMetaDataWithTranMessage(message, this.metadata);
+            const { transLogProcessState, spaces, propName, newCurMetaData } =
+                getMetaDataWithTranMessage(
+                    message,
+                    this.curMetaData,
+                ) as MetaDataWithTranMessageType;
+            if (
+                (transLogProcessState === TransLogProcessState.LAST ||
+                    transLogProcessState === TransLogProcessState.NO_CHANGE) &&
+                newCurMetaData
+            ) {
+                this.curMetaData = newCurMetaData;
+                if (propName) {
+                    const tmp = {
+                        data: this.curMetaData.data?.[propName],
+                        last: this.curMetaData,
+                        spaces: spaces,
+                    };
+                    this.curMetaData = tmp;
+                }
+            } else if (transLogProcessState === TransLogProcessState.NEXT && propName) {
+                const tmp = {
+                    data: this.curMetaData.data?.[propName],
+                    last: this.curMetaData,
+                    spaces: spaces,
+                };
+                this.curMetaData = tmp;
+            } else if (
+                transLogProcessState === TransLogProcessState.INIT &&
+                this.curMetaData.data !== this.metadata
+            ) {
+                this.curMetaData = {
+                    data: this.metadata,
+                    last: null,
+                };
+            }
         };
 
         this.ffmpeg.on('log', getMetaDataWithLog);

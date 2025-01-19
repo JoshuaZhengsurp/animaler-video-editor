@@ -16,3 +16,10 @@ interface TranCodeOptions {
     outputFile: string;
     [propName: string]: unknown;
 }
+
+type MetaDataWithTranMessageType = {
+    transLogProcessState: TransLogProcessState;
+    spaces?: number;
+    propName?: string;
+    newCurMetaData?: Record<string, any>;
+};

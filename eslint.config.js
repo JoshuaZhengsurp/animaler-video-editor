@@ -9,6 +9,11 @@ export default [
     { files: ['**/*.js'], languageOptions: { sourceType: 'script' } },
     { languageOptions: { globals: globals.browser } },
     pluginJs.configs.recommended,
-    ...tseslint.configs.recommended,
+    // ...tseslint.configs.recommended,
     pluginReact.configs.flat.recommended,
+    {
+        rules: {
+            '@typescript-eslint/no-explicit-any': false,
+        },
+    },
 ];

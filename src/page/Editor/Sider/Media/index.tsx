@@ -75,7 +75,12 @@ export default function Media() {
                 {/* 播放时长&内容首帧&hover播放&画质压缩 */}
                 {!isLoading &&
                     videos.map((video) => (
-                        <MiniVideo key={video.id} videoData={video.data} title={video.name} />
+                        <MiniVideo
+                            key={video.id}
+                            videoData={video.data}
+                            title={video.name}
+                            duration={video.info?.input?.Duration || ''}
+                        />
                     ))}
             </div>
         </div>

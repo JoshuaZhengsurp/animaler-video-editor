@@ -68,8 +68,8 @@ class FFmpegManager {
         // console.log('currentTranVideoId', this.currentTranVideoId);
 
         try {
-            await ffmpeg.deleteFile('input.avi');
-            await ffmpeg.deleteFile('output.mp4');
+            await ffmpeg.deleteFile(inputFile);
+            await ffmpeg.deleteFile(outputFile);
         } catch {
             console.log('No files to delete');
         }
@@ -111,11 +111,11 @@ class FFmpegManager {
 
             const fileData = await ffmpeg.readFile(outputFile);
             const data = new Uint8Array(fileData as ArrayBuffer);
-            return { data, id: this.currentTranVideoId, outputFile };
+            console.log('result finally', this.metadata);
+            return { data, id: this.currentTranVideoId, outputFile, info: this.metadata };
         } finally {
             this.tranCoding = false;
             this.currentTranVideoId = '';
-            console.log('result finally', this.metadata);
         }
     }
 

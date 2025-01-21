@@ -6,14 +6,5 @@ import trackImg from '@/assets/track_img.png';
  */
 
 export default function VideoTrack() {
-    return (
-        <div
-            className='w-full h-full flex justify-center'
-            style={{
-                backgroundImage: `url(${trackImg})`,
-                backgroundSize: 'contain',
-                backgroundRepeat: 'no-repeat',
-            }}
-        ></div>
-    );
+    return <div className='w-full h-full flex justify-center'>音轨</div>;
 }

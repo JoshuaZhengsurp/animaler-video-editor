@@ -9,6 +9,7 @@ export interface VideoItem {
     duration?: number;
     thumbnail?: string;
     suffix?: string;
+    info: Record<string, any>;
     // status: 'idle' | 'processing' | 'done' | 'error';
     // error?: string;
 }
@@ -28,7 +29,7 @@ interface VideoStore {
     // updateVideoStatus: (id: string, status: VideoItem['status'], error?: string) => void;
 }
 
-export const useVideoStore = create<VideoStore>((set) => ({
+export const useVideoStore = create<VideoStore>((set, get) => ({
     videos: [],
 
     /**
@@ -67,6 +68,7 @@ export const useVideoStore = create<VideoStore>((set) => ({
                 data: transCodeResult,
                 id,
                 outputFile,
+                info,
             } = await ffmpegManager.transcode({
                 type,
                 uri: data,
@@ -77,7 +79,14 @@ export const useVideoStore = create<VideoStore>((set) => ({
 
             set((state) => ({
                 videos: [
-                    { id, name: fileName, data: transCodeResult, path: origin, suffix: fileSuffix },
+                    {
+                        id,
+                        name: fileName,
+                        data: transCodeResult,
+                        path: origin,
+                        suffix: fileSuffix,
+                        info,
+                    },
                     ...state.videos,
                 ] as VideoItem[],
             }));
@@ -101,6 +110,12 @@ export const useVideoStore = create<VideoStore>((set) => ({
         set((state) => ({
             videos: state.videos.filter((video) => video.id !== id),
         }));
+    },
+
+    getVideoDuration: (id: string) => {
+        return (
+            get().videos.filter((viodeItem) => viodeItem.id === id)?.[0].info?.input?.Duration || ''
+        );
     },
 
     // updateVideoStatus: (id: string, status: VideoItem['status'], error?: string) => {

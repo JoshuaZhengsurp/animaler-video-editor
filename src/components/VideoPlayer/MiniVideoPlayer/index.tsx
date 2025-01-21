@@ -3,10 +3,11 @@ import React, { Fragment, useEffect, useRef, useState } from 'react';
 interface IProps {
     videoData: Uint8Array;
     title?: string;
+    duration: string | number;
 }
 
 export default function MiniVideo(props: IProps) {
-    const { videoData, title } = props;
+    const { videoData, title, duration } = props;
 
     const [showControls, setShowControls] = useState(false);
 
@@ -45,7 +46,10 @@ export default function MiniVideo(props: IProps) {
                     component
                 </div> */}
             </div>
-            {title && <div className='w-full m-1 text-xs'>{title}</div>}
+            <div className='w-full flex flex-row justify-between items-center'>
+                {title && <div className='m-1 text-x'>{title}</div>}
+                {duration && <div className='m-1 text-xs'>{duration}</div>}
+            </div>
         </Fragment>
     );
 }

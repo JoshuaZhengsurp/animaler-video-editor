@@ -31,7 +31,7 @@ export default function VideoPlayer(props: Iprops) {
         );
         if (playerWidth && playerHeight) {
             if (rate >= playerWidth / playerHeight) {
-                return [playerWidth, playerHeight / rate];
+                return [playerWidth, playerWidth / rate];
             } else {
                 return [playerHeight * rate, playerHeight];
             }

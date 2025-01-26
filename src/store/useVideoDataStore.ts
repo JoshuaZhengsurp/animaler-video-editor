@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { ffmpegManager } from '@/utils/ffmpeg';
+import { formatDurationTime } from '@/utils/common';
 
 export interface VideoItem {
     id: string;
@@ -25,6 +26,8 @@ interface VideoStore {
     // 操作方法
     addVideo: (videoInfo: VideoInfo) => Promise<void>;
     removeVideo: (id: string) => void;
+    getVideoDuration: (id: string) => number | string;
+    getVideoDurationWithVideoItem: (videoItem?: VideoItem) => number | string;
     // setCurrentVideo: (id: string | null) => void;
     // updateVideoStatus: (id: string, status: VideoItem['status'], error?: string) => void;
 }
@@ -86,6 +89,7 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
                         path: origin,
                         suffix: fileSuffix,
                         info,
+                        duration: formatDurationTime(info?.input?.Duration),
                     },
                     ...state.videos,
                 ] as VideoItem[],
@@ -112,10 +116,13 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
         }));
     },
 
+    getVideoDurationWithVideoItem: (videoItem?: VideoItem) => {
+        return videoItem?.info?.input?.Duration || '';
+    },
+
     getVideoDuration: (id: string) => {
-        return (
-            get().videos.filter((viodeItem) => viodeItem.id === id)?.[0].info?.input?.Duration || ''
-        );
+        const videoItem = get().videos.filter((viodeItem) => viodeItem.id === id)?.[0];
+        return get().getVideoDurationWithVideoItem(videoItem);
     },
 
     // updateVideoStatus: (id: string, status: VideoItem['status'], error?: string) => {

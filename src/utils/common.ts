@@ -137,3 +137,44 @@ export const getMetaDataWithTranMessage = (
     }
 };
 /************************** 解码时获取视频metadata ***************************/
+
+export const formatDurationTime = (duration: string) => {
+    if (duration) {
+        const reg = /(\d+):(\d{2}):(\d+(?:\.\d+)?)/;
+        const match = duration.match(reg);
+
+        const h = match?.[1] ? +match?.[1] : 0;
+        const m = match?.[2] ? +match?.[2] : 0;
+        const s = match?.[3] ? +match?.[3] : 0;
+
+        return (h * 60 * 60 + m * 60 + s) * 1000;
+    }
+    return -1;
+};
+
+/**
+ * @description 补充前置0，转成字符串；
+ * @param num num > 0
+ */
+export const formatPrefixZero = (num = 0, preZeroNum = 0) => {
+    const numLen = num > 0 ? Math.floor(Math.log10(num) + 1) : 1;
+    if (numLen < preZeroNum) {
+        // 添加preZeroNum-numLen个前置零
+        return '0'.repeat(preZeroNum - numLen) + num;
+    }
+    return num;
+};
+
+export const formatDurationTimeToString = (duration = 0, isSecondFloor = false) => {
+    // debugger;
+    let s = formatPrefixZero(
+        isSecondFloor
+            ? (duration % (60 * 1000)) / 1000
+            : Math.floor((duration % (60 * 1000)) / 1000),
+        2,
+    );
+    duration = Math.floor(duration / (60 * 1000));
+    let m = formatPrefixZero(duration % 60, 2);
+    let h = formatPrefixZero(Math.floor(duration / 60), 2);
+    return `${h}:${m}:${s}`;
+};

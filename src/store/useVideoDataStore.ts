@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { ffmpegManager } from '@/utils/ffmpeg';
-import { formatDurationTime } from '@/utils/common';
+import { formatDurationTime, parseVideoResolution } from '@/utils/common';
 
 export interface VideoItem {
     id: string;
@@ -11,6 +11,11 @@ export interface VideoItem {
     thumbnail?: string;
     suffix?: string;
     info: Record<string, any>;
+    resolution: {
+        width: number | string;
+        height: number | string;
+        ratio: number;
+    };
     // status: 'idle' | 'processing' | 'done' | 'error';
     // error?: string;
 }
@@ -67,33 +72,37 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
                 await ffmpegManager.init();
             }
 
-            const {
-                data: transCodeResult,
-                id,
-                outputFile,
-                info,
-            } = await ffmpegManager.transcode({
+            const res = await ffmpegManager.transcode({
                 type,
                 uri: data,
-                inputFile: fileName,
+                fileName: fileName,
             });
+            if (res) {
+                const { data: transCodeResult, id, outputFile, info } = res;
 
-            console.log('addVideo', id, outputFile);
+                console.log(
+                    'addVideo',
+                    id,
+                    outputFile,
+                    parseVideoResolution(info?.input?.videoInfo?.[1]),
+                );
 
-            set((state) => ({
-                videos: [
-                    {
-                        id,
-                        name: fileName,
-                        data: transCodeResult,
-                        path: origin,
-                        suffix: fileSuffix,
-                        info,
-                        duration: formatDurationTime(info?.input?.Duration),
-                    },
-                    ...state.videos,
-                ] as VideoItem[],
-            }));
+                set((state) => ({
+                    videos: [
+                        {
+                            id,
+                            name: fileName,
+                            data: transCodeResult,
+                            path: origin,
+                            suffix: fileSuffix,
+                            info,
+                            duration: formatDurationTime(info?.input?.Duration),
+                            resolution: parseVideoResolution(info?.input?.videoInfo?.[1]),
+                        },
+                        ...state.videos,
+                    ] as VideoItem[],
+                }));
+            }
             // 更新视频信息
             // set(state => ({
             //     videos: state.videos.map(video => {

@@ -9,6 +9,9 @@ import { open } from './open';
 // const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+const initWindowWidth = 1024;
+const initWindowHeight = 768;
+
 // The built directory structure
 //
 // ├─┬ dist-electron
@@ -48,6 +51,8 @@ async function createWindow() {
   win = new BrowserWindow({
     title: 'Main window',
     icon: path.join(process.env.VITE_PUBLIC, 'favicon.ico'),
+    width: initWindowWidth,
+    height: initWindowHeight,
     webPreferences: {
       preload,
       // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production

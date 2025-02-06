@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import CanvasPlayer from '@/components/VideoPlayer';
+import { useVideoStore } from '@/store/useVideoDataStore';
+import { calculateFitDimensions } from '@/utils/common';
 
 /**
  * @todo 通过canvas绘制播放视频
@@ -16,25 +18,35 @@ export default function VideoPlayer(props: Iprops) {
     const [canvasPlayerWH, setCanvasPlayerWH] = useState<number[]>([]);
     const playerRef = useRef<HTMLDivElement>(null);
 
+    const videoList = useVideoStore((s) => s.videos);
+    const mainVideo = useMemo(() => videoList?.[0], [videoList]);
+
+    /**
+     * @todo 使用VideoPlayerStore，更新width height数据
+     */
+
+    // console.log('videoList', videoList);
+
     const getCanvasPlayerWH = () => {
         const [width, height] = playerWHRate;
-        const rate = width / height;
+        const ratio = width / height;
         const playerWidth = playerRef.current?.clientWidth || 0;
         const playerHeight = (playerRef.current?.clientHeight || 0) - PADDING_BUTTOM_EXTRA;
         console.log(
             'getCanvasPlayerWH',
-            rate,
+            ratio,
             playerWidth / playerHeight,
             playerRef.current?.clientHeight,
             playerHeight,
             playerWidth,
+            calculateFitDimensions([playerWidth, playerHeight], playerWidth / playerHeight, ratio),
         );
         if (playerWidth && playerHeight) {
-            if (rate >= playerWidth / playerHeight) {
-                return [playerWidth, playerWidth / rate];
-            } else {
-                return [playerHeight * rate, playerHeight];
-            }
+            return calculateFitDimensions(
+                [playerWidth, playerHeight],
+                playerWidth / playerHeight,
+                ratio,
+            );
         }
         return [];
     };
@@ -46,7 +58,12 @@ export default function VideoPlayer(props: Iprops) {
     return (
         <div className='w-full h-full flex justify-center' ref={playerRef}>
             {canvasPlayerWH.length && (
-                <CanvasPlayer width={canvasPlayerWH[0]} height={canvasPlayerWH[1]} />
+                <CanvasPlayer
+                    width={canvasPlayerWH[0]}
+                    height={canvasPlayerWH[1]}
+                    videoResolution={mainVideo?.resolution}
+                    videoFile={`${mainVideo?.id}_${mainVideo?.name}_i.${mainVideo?.suffix}`}
+                />
             )}
         </div>
     );

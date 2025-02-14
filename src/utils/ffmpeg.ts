@@ -59,23 +59,23 @@ class FFmpegManager {
     /* 转码，例如mp4 */
     async transcode(options: Partial<TranCodeOptions>) {
         this.currentTranVideoId = nanoid(9);
-        const {
-            inputFile = `${this.currentTranVideoId}_input.avi`,
-            outputFile = `${this.currentTranVideoId}_output.mp4`,
-        } = options;
+        const { fileName, type: originType } = options;
         const ffmpeg = this.ffmpeg;
 
-        // console.log('currentTranVideoId', this.currentTranVideoId);
+        const inputFile = `${this.currentTranVideoId}_${fileName || ''}_i.avi`;
+        const outputFile = `${this.currentTranVideoId}_${fileName || ''}_o.mp4`;
+
+        console.log('currentTranVideoId', this.currentTranVideoId, fileName);
 
         try {
-            await ffmpeg.deleteFile('input.avi');
-            await ffmpeg.deleteFile('output.mp4');
+            await ffmpeg.deleteFile(inputFile);
+            await ffmpeg.deleteFile(outputFile);
         } catch {
             console.log('No files to delete');
         }
 
         try {
-            if (options.type === 'LOCAL') {
+            if (originType === 'LOCAL') {
                 await ffmpeg.writeFile(inputFile, options.uri as Uint8Array<ArrayBuffer>);
             } else {
                 const videoURL = options.uri as string;
@@ -103,6 +103,8 @@ class FFmpegManager {
                     '35', // GOP大小设置为帧率
                     '-movflags',
                     '+faststart',
+                    '-frag_duration',
+                    '1000',
                     '-y',
                     outputFile,
                 ],
@@ -110,12 +112,16 @@ class FFmpegManager {
             );
 
             const fileData = await ffmpeg.readFile(outputFile);
+            // await ffmpeg.writeFile(outputFile, fileData);
             const data = new Uint8Array(fileData as ArrayBuffer);
-            return { data, id: this.currentTranVideoId, outputFile };
+            // await ffmpeg.writeFile(outputFile, data);
+            console.log('result finally', this.metadata);
+            return { data, id: this.currentTranVideoId, outputFile, info: this.metadata };
+        } catch (error) {
+            console.error('transvideo failed', error);
         } finally {
             this.tranCoding = false;
             this.currentTranVideoId = '';
-            console.log('result finally', this.metadata);
         }
     }
 
@@ -157,7 +163,18 @@ class FFmpegManager {
         return timeout ? this.ffmpeg.exec(args, timeout) : this.ffmpeg.exec(args);
     }
 
-    async getVideoDuration(path: string) {}
+    // 获取视频某一帧，通过canvas播放视频
+
+    async getVideoDuration(path: string) {
+        try {
+            const res = await this.ffmpeg.exec(['-i', path, '-f', 'null', '-']);
+            console.log('getVideoDuration', res);
+            return this.metadata.duration;
+        } catch (error) {
+            console.error('Failed to get video duration:', error);
+            throw error;
+        }
+    }
 
     private showLog() {
         this.isLogShow = import.meta.env.VITE_APP_FFMPEG_LOG === 'true' && IS_SHOW_FFMPEG_LOG;
@@ -212,6 +229,46 @@ class FFmpegManager {
             this.ffmpeg.on('progress', ({ progress, time }) => {
                 console.log('[log] progress:', progress, '时间:', time);
             });
+        }
+    }
+
+    async extractFrame({
+        inputFile,
+        time,
+        w = 0,
+        h = 0,
+        outputFile = 'frame.jpg',
+    }: ExtractFrameOptions) {
+        try {
+            console.log('extractFrame', inputFile, w, h);
+            await this.ffmpeg.exec([
+                '-i',
+                inputFile,
+                '-vf',
+                `select=eq(n\\,${0})`,
+                '-s',
+                `${w}x${h}`,
+                '-vframes',
+                `1`,
+                outputFile,
+                // '-ss',
+                // time.toString(),
+                // '-i',
+                // inputFile,
+                // '-vframes',
+                // '1',
+                // '-q:v',
+                // '2',
+                // outputFile,
+            ]);
+
+            console.log('extractFrame');
+
+            const data = await this.ffmpeg.readFile(outputFile);
+            return new Blob([data], { type: 'image/jpeg' });
+        } catch (error) {
+            console.error('Failed to extract frame:', error);
+            throw error;
         }
     }
 }

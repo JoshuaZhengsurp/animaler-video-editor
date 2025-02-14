@@ -11,7 +11,7 @@
 interface TranCodeOptions {
     type: string;
     uri: string | Uint8Array<ArrayBufferLike>;
-    inputFile: string;
+    fileName: string;
     execCmd: Array<string> | string;
     outputFile: string;
     [propName: string]: unknown;
@@ -23,3 +23,11 @@ type MetaDataWithTranMessageType = {
     propName?: string;
     newCurMetaData?: Record<string, any>;
 };
+
+interface ExtractFrameOptions {
+    inputFile: string;
+    time: number;
+    outputFile?: string;
+    w: number;
+    h: number;
+}

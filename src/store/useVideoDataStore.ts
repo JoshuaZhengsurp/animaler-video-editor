@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { ffmpegManager } from '@/utils/ffmpeg';
+import { formatDurationTime, parseVideoResolution } from '@/utils/common';
 
 export interface VideoItem {
     id: string;
@@ -9,6 +10,12 @@ export interface VideoItem {
     duration?: number;
     thumbnail?: string;
     suffix?: string;
+    info: Record<string, any>;
+    resolution: {
+        width: number | string;
+        height: number | string;
+        ratio: number;
+    };
     // status: 'idle' | 'processing' | 'done' | 'error';
     // error?: string;
 }
@@ -24,11 +31,13 @@ interface VideoStore {
     // 操作方法
     addVideo: (videoInfo: VideoInfo) => Promise<void>;
     removeVideo: (id: string) => void;
+    getVideoDuration: (id: string) => number | string;
+    getVideoDurationWithVideoItem: (videoItem?: VideoItem) => number | string;
     // setCurrentVideo: (id: string | null) => void;
     // updateVideoStatus: (id: string, status: VideoItem['status'], error?: string) => void;
 }
 
-export const useVideoStore = create<VideoStore>((set) => ({
+export const useVideoStore = create<VideoStore>((set, get) => ({
     videos: [],
 
     /**
@@ -63,24 +72,37 @@ export const useVideoStore = create<VideoStore>((set) => ({
                 await ffmpegManager.init();
             }
 
-            const {
-                data: transCodeResult,
-                id,
-                outputFile,
-            } = await ffmpegManager.transcode({
+            const res = await ffmpegManager.transcode({
                 type,
                 uri: data,
-                inputFile: fileName,
+                fileName: fileName,
             });
+            if (res) {
+                const { data: transCodeResult, id, outputFile, info } = res;
 
-            console.log('addVideo', id, outputFile);
+                console.log(
+                    'addVideo',
+                    id,
+                    outputFile,
+                    parseVideoResolution(info?.input?.videoInfo?.[1]),
+                );
 
-            set((state) => ({
-                videos: [
-                    { id, name: fileName, data: transCodeResult, path: origin, suffix: fileSuffix },
-                    ...state.videos,
-                ] as VideoItem[],
-            }));
+                set((state) => ({
+                    videos: [
+                        {
+                            id,
+                            name: fileName,
+                            data: transCodeResult,
+                            path: origin,
+                            suffix: fileSuffix,
+                            info,
+                            duration: formatDurationTime(info?.input?.Duration),
+                            resolution: parseVideoResolution(info?.input?.videoInfo?.[1]),
+                        },
+                        ...state.videos,
+                    ] as VideoItem[],
+                }));
+            }
             // 更新视频信息
             // set(state => ({
             //     videos: state.videos.map(video => {
@@ -101,6 +123,15 @@ export const useVideoStore = create<VideoStore>((set) => ({
         set((state) => ({
             videos: state.videos.filter((video) => video.id !== id),
         }));
+    },
+
+    getVideoDurationWithVideoItem: (videoItem?: VideoItem) => {
+        return videoItem?.info?.input?.Duration || '';
+    },
+
+    getVideoDuration: (id: string) => {
+        const videoItem = get().videos.filter((viodeItem) => viodeItem.id === id)?.[0];
+        return get().getVideoDurationWithVideoItem(videoItem);
     },
 
     // updateVideoStatus: (id: string, status: VideoItem['status'], error?: string) => {

@@ -6,19 +6,19 @@ interface Iprops {
     curDuration?: number;
 
     className: string;
-    curDutationClassName?: string;
-    dutationClassName?: string;
+    curDurationClassName?: string;
+    durationClassName?: string;
 }
 
 export default function Duration(props: Iprops) {
-    const { duration, curDuration, className, curDutationClassName, dutationClassName } = props;
+    const { duration, curDuration, className, curDurationClassName, durationClassName } = props;
 
     return (
         <div className={className}>
-            <span className={`${curDutationClassName}`}>
+            <span className={`${curDurationClassName}`}>
                 {formatDurationTimeToString(curDuration)}
             </span>
-            /<span className={`${dutationClassName}`}>{formatDurationTimeToString(duration)}</span>
+            /<span className={`${durationClassName}`}>{formatDurationTimeToString(duration)}</span>
         </div>
     );
 }

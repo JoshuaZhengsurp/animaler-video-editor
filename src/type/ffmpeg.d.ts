@@ -31,3 +31,13 @@ interface ExtractFrameOptions {
     w: number;
     h: number;
 }
+
+interface VideoFrame {
+    time: number;
+    image: string;
+}
+
+interface AudioData {
+    waveform: number[]; // 音频波形数据
+    duration: number;
+}

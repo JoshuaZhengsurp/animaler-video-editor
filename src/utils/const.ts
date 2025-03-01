@@ -1,6 +1,8 @@
 export const IS_SHOW_FFMPEG_LOG = localStorage.getItem('IS_SHOW_FFMPEG_LOG') === '1';
 export const IS_SHOW_TRANCODE_STATUS = localStorage.getItem('IS_SHOW_TRANCODE_STATUS') === 'true';
 
+export const PER_SECOND = 1000;
+
 export const PATH_CONFIG = {
     resourcePath: '/resource/', // 资源目录，存放视频、音频等大文件
     framePath: '/frame/', // 持久化帧文件，用于轨道

@@ -1,0 +1,22 @@
+.time-pointer-content {
+    position: absolute;
+    width: 100%;
+    height: calc(100% - 0.5rem);
+    top: 0;
+    left: 0;
+    // z-index: 9;
+}
+
+.time-pointer {
+    position: absolute;
+    height: 100%;
+    background-color: #fff;
+    width: 2px;
+    z-index: 12;
+
+    &-icon {
+        position: absolute;
+        transform: translate(-5px, -1px);
+        z-index: 12;
+    }
+}

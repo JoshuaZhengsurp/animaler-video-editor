@@ -12,7 +12,6 @@ import { TimeLineConfig } from '@/components/VideoTrack/TimeLine/config';
  */
 const getGridWidth = (timeLineWidth: number, duration?: number) => {
     // 计算每像素代表的秒数
-
     !duration && (duration = 15 * PER_SECOND);
     const secondsPerPixel = duration / timeLineWidth;
 
@@ -71,23 +70,23 @@ export const drawTimeLine = (
         lineWidth,
     } = timeLineConfig;
     if (!width || !height) {
-        return;
+        return null;
     }
 
     // console.log(ishasScale, sessionStorage.getItem(DEV_IS_HAVE_SCALE));
 
+    // canvasContext.scale(ratio, ratio);
     if (canvasContext.__radio__ !== ratio) {
         // console.log(canvasContext.__radio__);
         canvasContext.scale(ratio, ratio);
         canvasContext.__radio__ = ratio;
     }
-    // console.log(canvasContext.__radio__, ratio);
     canvasContext.clearRect(0, 0, width, height);
     canvasContext.fillStyle = bgColor;
     canvasContext.fillRect(0, 0, width, height);
 
     // 添加平移操作，确保 0:00 能完全显示
-    const translateX = 2 * 16; // 向右平移一个数字的宽度
+    const translateX = 1.02 * 16; // 向右平移一个数字的宽度
     canvasContext.translate(translateX, 0);
 
     // 绘制时间轴刻度
@@ -109,7 +108,6 @@ export const drawTimeLine = (
     for (let i = 0; i <= totalGrids; i++) {
         const x = i * bigGridWidth;
         // 绘制大格线
-        console.log(x + 2 * textSize);
         canvasContext.moveTo(x, height / 2);
         // canvasContext.lineTo(x, height);
 
@@ -141,7 +139,8 @@ export const drawTimeLine = (
     canvasContext.setTransform(ratio, 0, 0, ratio, 0, 0);
 
     return {
-        ceil,
+        ceil: ceil * PER_SECOND,
+        perCeilGridWidth: smallGridWidth,
     };
 };
 

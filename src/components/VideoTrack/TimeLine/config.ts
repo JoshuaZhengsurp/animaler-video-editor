@@ -16,7 +16,8 @@ export interface TimeLineConfig {
 function getTimeLineConfig(isDark: boolean): TimeLineConfig {
     return {
         bgColor: isDark ? '#13131B' : '#E5E7EB', // 背景颜色
-        ratio: window.devicePixelRatio, // 设备像素比
+        // ratio: window.devicePixelRatio, // 设备像素比
+        ratio: 1, // render的时候可能导致重复scale；暂且统一为1
         textSize: 11, // 字号
         textScale: 0.83, // 支持更小号字： 10 / 12
         lineWidth: 2, // 线宽

@@ -13,6 +13,8 @@ interface Iprops {
 export default function Duration(props: Iprops) {
     const { duration, curDuration, className, curDurationClassName, durationClassName } = props;
 
+    // console.log('duration', duration, curDuration);
+
     return (
         <div className={className}>
             <span className={`${curDurationClassName}`}>

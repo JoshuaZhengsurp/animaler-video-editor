@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { defaultTimeLineConfig, defaultTimeLineConfig as timeLineConfig } from './config';
 import { drawTimeLine as drawTimeLineCanvas } from '@/utils/canvas';
+import useVideoTrackStore from '@/store/useVideoTrackStore';
 
 export interface Iprops {
     duration: number;
@@ -9,6 +10,10 @@ export interface Iprops {
 
 export default function TimeLine(props: Iprops) {
     const { duration, className } = props;
+
+    const setTrackWidth = useVideoTrackStore((s) => s.setTrackWidth);
+    const setTimeLineCeilWidth = useVideoTrackStore((s) => s.setTimeLineCeilWidth);
+    const setTimeIntervalCeil = useVideoTrackStore((s) => s.setTimeIntervalCeil);
 
     const timeLineRef = useRef<HTMLCanvasElement>(null);
     const timeLineContainerRef = useRef<HTMLDivElement>(null);
@@ -27,6 +32,7 @@ export default function TimeLine(props: Iprops) {
                 width,
                 height,
             });
+            setTrackWidth(width);
         }
     }, []);
 
@@ -43,11 +49,15 @@ export default function TimeLine(props: Iprops) {
     }, []);
 
     const drawTimeLine = () => {
-        drawTimeLineCanvas(
+        const res = drawTimeLineCanvas(
             canvasContextRef.current!,
             { duration },
             { ...canvasRect, ...timeLineConfig },
         );
+        if (res) {
+            setTimeLineCeilWidth(res.perCeilGridWidth);
+            setTimeIntervalCeil(res.ceil);
+        }
     };
 
     useEffect(() => {

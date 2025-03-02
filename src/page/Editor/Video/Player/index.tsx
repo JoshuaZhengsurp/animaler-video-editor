@@ -7,13 +7,13 @@ import { calculateFitDimensions } from '@/utils/common';
  * @todo 通过canvas绘制播放视频
  */
 
-interface Iprops {
+interface IProps {
     playerWHRate: number[];
 }
 
-const PADDING_BUTTOM_EXTRA = 20;
+const PADDING_BUTTON_EXTRA = 20;
 
-export default function VideoPlayer(props: Iprops) {
+export default function VideoPlayer(props: IProps) {
     const { playerWHRate } = props;
     const [canvasPlayerWH, setCanvasPlayerWH] = useState<number[]>([]);
     const playerRef = useRef<HTMLDivElement>(null);
@@ -31,16 +31,16 @@ export default function VideoPlayer(props: Iprops) {
         const [width, height] = playerWHRate;
         const ratio = width / height;
         const playerWidth = playerRef.current?.clientWidth || 0;
-        const playerHeight = (playerRef.current?.clientHeight || 0) - PADDING_BUTTOM_EXTRA;
-        console.log(
-            'getCanvasPlayerWH',
-            ratio,
-            playerWidth / playerHeight,
-            playerRef.current?.clientHeight,
-            playerHeight,
-            playerWidth,
-            calculateFitDimensions([playerWidth, playerHeight], playerWidth / playerHeight, ratio),
-        );
+        const playerHeight = (playerRef.current?.clientHeight || 0) - PADDING_BUTTON_EXTRA;
+        // console.log(
+        //     'getCanvasPlayerWH',
+        //     ratio,
+        //     playerWidth / playerHeight,
+        //     playerRef.current?.clientHeight,
+        //     playerHeight,
+        //     playerWidth,
+        //     calculateFitDimensions([playerWidth, playerHeight], playerWidth / playerHeight, ratio),
+        // );
         if (playerWidth && playerHeight) {
             return calculateFitDimensions(
                 [playerWidth, playerHeight],

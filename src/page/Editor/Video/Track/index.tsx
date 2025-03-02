@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useVideoStore } from '@/store/useVideoDataStore';
 
 import Duration from '@/components/VideoTrack/Duration';
@@ -15,20 +15,40 @@ import useVideoTrackStore from '@/store/useVideoTrackStore';
 
 export default function Track() {
     const videoTrackStore = useVideoTrackStore();
+    const currentTime = useVideoTrackStore((s) => s.currentTime);
     const videoList = useVideoStore((s) => s.videos);
 
     const [pointerPosition, setPointerPosition] = useState(0);
 
     const mainVideo = useMemo(() => videoList[0] || null, [videoList]);
 
+    const isDragTimePointerEffect = useRef(false);
+
     const handleUpdateTimestamp = (position: number) => {
         if (position >= 0) {
+            isDragTimePointerEffect.current = true;
             const curTimestamp = videoTrackStore.getCurrentTimestamp(position);
-            // console.log(position, curTimestamp);
             videoTrackStore.setCurrentTime(curTimestamp);
             setPointerPosition(position);
         }
     };
+
+    const handleUpdatePosition = (timestamp: number) => {
+        if (timestamp >= 0) {
+            const position = videoTrackStore.getCurrentPosition(timestamp);
+            console.log(position);
+            setPointerPosition(position);
+        }
+    };
+
+    useEffect(() => {
+        // console.log('videoTrackStore.currentTime', videoTrackStore.currentTime);
+        if (!isDragTimePointerEffect.current) {
+            handleUpdatePosition(videoTrackStore.currentTime);
+        } else {
+            isDragTimePointerEffect.current = false;
+        }
+    }, [currentTime]);
 
     useEffect(() => {
         let duration = 0;

@@ -30,6 +30,13 @@ interface ExtractFrameOptions {
     outputFile?: string;
     w: number;
     h: number;
+    fps: number;
+}
+
+interface GetPlayFrameOptions {
+    inputFile: string;
+    time: number;
+    frameIndex: number;
 }
 
 interface VideoFrame {

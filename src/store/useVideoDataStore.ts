@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ffmpegManager } from '@/utils/ffmpeg';
+import { ffmpegManager } from '@/utils/ffmpeg/ffmpeg';
 import { formatDurationTime, parseVideoResolution } from '@/utils/common';
 
 export interface VideoItem {
@@ -23,7 +23,7 @@ export interface VideoItem {
 interface VideoInfo {
     origin: string;
     type: string;
-    data: Uint8Array<ArrayBuffer>;
+    data: Uint8Array<ArrayBuffer> | string;
 }
 
 interface VideoStore {
@@ -47,7 +47,6 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
         try {
             const fileName = origin.split(/[\\/]/).pop() || '';
             const fileSuffix = fileName.split('.').pop() || '';
-            // const id = crypto.randomUUID();
 
             console.log('origin', origin, fileName);
 

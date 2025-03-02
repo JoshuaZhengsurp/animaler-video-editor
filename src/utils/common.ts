@@ -264,3 +264,13 @@ export const calculateCenterPosition = (
 //     const fileName = origin.split(/[\\/]/).pop() || '';
 //     const fileSuffix = fileName.split('.').pop() || '';
 // }
+
+/**
+ * @description 比较浮点数；差值1e-4认为等于
+ * @parma a
+ * @parma b
+ * @returns a <= b
+ */
+export const cmpFloat = (a: number, b: number) => {
+    return a < b || Math.abs(a - b) < 1e-4;
+};

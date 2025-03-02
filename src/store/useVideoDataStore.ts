@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { ffmpegManager } from '@/utils/ffmpeg/ffmpeg';
+import { ffmpegManager } from '@/utils/ffmpeg/manager';
 import { formatDurationTime, parseVideoResolution } from '@/utils/common';
 
+type PathType = string;
 export interface VideoItem {
     id: string;
     name: string;
@@ -16,6 +17,7 @@ export interface VideoItem {
         height: number | string;
         ratio: number;
     };
+    pFrameMap: Record<string | number, PathType>;
     // status: 'idle' | 'processing' | 'done' | 'error';
     // error?: string;
 }
@@ -53,19 +55,6 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
             /**
              * @todo 视频解码状态描述
              */
-            // 先添加视频项到列表
-            // set(state => ({
-            //     videos: [
-            //         ...state.videos,
-            //         {
-            //             id,
-            //             name: fileName,
-            //             path: origin,
-            //             status: 'processing',
-            //         },
-            //     ],
-            // }));
-
             // 初始化 FFmpeg（如果需要）
             if (!ffmpegManager.isLoading) {
                 await ffmpegManager.init();
@@ -110,11 +99,6 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
             // }));
         } catch (error) {
             console.error('Failed to add video:', error);
-            // set(state => ({
-            //     videos: state.videos.map(video =>
-            //         video.path === path ? { ...video, status: 'error', error: error.message } : video,
-            //     ),
-            // }));
         }
     },
 
@@ -131,6 +115,19 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
     getVideoDuration: (id: string) => {
         const videoItem = get().videos.filter((viodeItem) => viodeItem.id === id)?.[0];
         return get().getVideoDurationWithVideoItem(videoItem);
+    },
+
+    updatePFrameMap: (id: string, frameMap: Record<string | number, PathType>) => {
+        set((state) => ({
+            videos: state.videos.map((video) =>
+                video.id === id ? { ...video, pFrameMap: frameMap } : video,
+            ),
+        }));
+    },
+
+    getPFrameMap: (id: string) => {
+        const video = get().videos.find((video) => video.id === id);
+        return video?.pFrameMap;
     },
 
     // updateVideoStatus: (id: string, status: VideoItem['status'], error?: string) => {

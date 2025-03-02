@@ -36,7 +36,6 @@ export default function Track() {
     const handleUpdatePosition = (timestamp: number) => {
         if (timestamp >= 0) {
             const position = videoTrackStore.getCurrentPosition(timestamp);
-            console.log(position);
             setPointerPosition(position);
         }
     };

@@ -1,9 +1,14 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
-import { IS_SHOW_FFMPEG_LOG, IS_SHOW_TRANCODE_STATUS, PATH_CONFIG } from '../const';
+import {
+    IS_SHOW_FFMPEG_LOG,
+    IS_SHOW_TRANCODE_STATUS,
+    PATH_CONFIG,
+    START_FRAME_INDEX_KEY,
+} from '../const';
 import { getMetaDataWithTranMessage, TransLogProcessState } from '../common';
 import { nanoid } from 'nanoid';
-import { genPlayFrame, transcodeFromAvi2Mp4 } from './Command';
+import { genPlayFrame, transcodeFromAvi2Mp4 } from './command';
 
 /**
  * @description
@@ -18,6 +23,7 @@ class FFmpegManager {
     public isTranCodeShow: boolean = false;
     //
     public metadata: Record<string, any> = {};
+    public videoPFrameMap: Map<string, PFrameMap> = new Map(); // 映射播放帧
 
     private tranCoding = false;
     private currentTranVideoId: string = '';
@@ -136,25 +142,6 @@ class FFmpegManager {
         }
     }
 
-    async convertToMp3(inputFileName: string, outputFileName: string) {
-        try {
-            await this.ffmpeg.exec([
-                '-i',
-                inputFileName,
-                '-vn',
-                '-acodec',
-                'libmp3lame',
-                '-q:a',
-                '2',
-                outputFileName,
-            ]);
-            return await this.ffmpeg.readFile(outputFileName);
-        } catch (error) {
-            console.error('Failed to convert to MP3:', error);
-            throw error;
-        }
-    }
-
     async getFileBlob(fileName: string) {
         const data = await this.ffmpeg.readFile(fileName);
         return new Blob([data], { type: 'audio/mp3' });
@@ -174,23 +161,10 @@ class FFmpegManager {
         return timeout ? this.ffmpeg.exec(args, timeout) : this.ffmpeg.exec(args);
     }
 
-    // 获取视频某一帧，通过canvas播放视频
-
-    async getVideoDuration(path: string) {
-        try {
-            const res = await this.ffmpeg.exec(['-i', path, '-f', 'null', '-']);
-            console.log('getVideoDuration', res);
-            return this.metadata.duration;
-        } catch (error) {
-            console.error('Failed to get video duration:', error);
-            throw error;
-        }
-    }
-
     /**
      * @todo 对帧需要进行唯一标识
      */
-    async extractFrame({ inputFile, time, w = 0, h = 0, fps }: ExtractFrameOptions) {
+    async extractFrame({ inputFile, time, w = 0, h = 0, fps, frameIndex }: ExtractFrameOptions) {
         try {
             console.log(time, fps);
             const isExistFrameDir = await this.checkDirExist(
@@ -198,12 +172,31 @@ class FFmpegManager {
                 `${time}`,
             );
             if (isExistFrameDir) {
-                const frameBlob = await this.getPlayFrame({ inputFile, time, frameIndex: 1 });
+                const frameBlob = await this.getPlayFrame({
+                    inputFile,
+                    time,
+                    frameIndex: frameIndex ?? 1,
+                });
                 return {
                     firstFrame: frameBlob,
                 };
             }
             await this.mkdir(`${this.resourcePath.playFrame}${time}/`);
+
+            /**
+             * @todo 关于#FRAME#，是否需要保留，需再考虑
+             */
+            if (!this.videoPFrameMap.has(inputFile)) {
+                this.videoPFrameMap.set(inputFile, {
+                    [START_FRAME_INDEX_KEY]: [],
+                });
+            }
+            /**
+             * 假设帧的解析是有序的
+             */
+            const map = this.videoPFrameMap.get(inputFile)!;
+            map[time] = `${this.resourcePath.playFrame}${time}/`;
+            map[START_FRAME_INDEX_KEY]?.push(time);
 
             const { commands, playFramePrefix } = genPlayFrame(
                 inputFile,
@@ -214,17 +207,12 @@ class FFmpegManager {
             );
 
             await this.ffmpeg.exec(commands);
-            // const list = await this.ffmpeg.listDir(`${this.resourcePath.playFrame}${time}/`);
-            // console.log(
-            //     'extractFrame',
-            //     playFramePrefix,
-            //     commands,
-            //     list,
-            //     `${playFramePrefix}1.jpg`,
-            //     `${playFramePrefix}${fps}.jpg`,
-            // );
 
-            const firstFrameData = await this.ffmpeg.readFile(`${playFramePrefix}1.jpg`);
+            console.log(`${playFramePrefix}${frameIndex ?? 1}.jpg`);
+
+            const firstFrameData = await this.ffmpeg.readFile(
+                `${playFramePrefix}${frameIndex ?? 1}.jpg`,
+            );
             return {
                 playFramePrefix,
                 firstFrame: new Blob([firstFrameData], { type: 'image/jpeg' }),
@@ -300,6 +288,42 @@ class FFmpegManager {
             this.ffmpeg.on('progress', ({ progress, time }) => {
                 console.log('[log] progress:', progress, '时间:', time);
             });
+        }
+    }
+
+    /**
+     * @deprecated 目前不采用这种方式
+     */
+    async convertToMp3(inputFileName: string, outputFileName: string) {
+        try {
+            await this.ffmpeg.exec([
+                '-i',
+                inputFileName,
+                '-vn',
+                '-acodec',
+                'libmp3lame',
+                '-q:a',
+                '2',
+                outputFileName,
+            ]);
+            return await this.ffmpeg.readFile(outputFileName);
+        } catch (error) {
+            console.error('Failed to convert to MP3:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * @deprecated 目前不采用这种方式获取视频信息
+     */
+    async getVideoDuration(path: string) {
+        try {
+            const res = await this.ffmpeg.exec(['-i', path, '-f', 'null', '-']);
+            console.log('getVideoDuration', res);
+            return this.metadata.duration;
+        } catch (error) {
+            console.error('Failed to get video duration:', error);
+            throw error;
         }
     }
 }

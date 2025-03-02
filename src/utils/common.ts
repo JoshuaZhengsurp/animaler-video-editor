@@ -274,3 +274,14 @@ export const calculateCenterPosition = (
 export const cmpFloat = (a: number, b: number) => {
     return a < b || Math.abs(a - b) < 1e-4;
 };
+
+/**
+ * @description 四舍五入，保留指定位数的小数（确认会是6位以内，避免精度和性能丢失）
+ * @param num 需要处理的数字
+ * @param decimals 需要保留的小数位数（0-6）
+ * @returns 处理后的数字
+ */
+export const fixFloat = (num: number, decimals: number): number => {
+    const multiplier = Math.pow(10, decimals);
+    return Math.round(num * multiplier) / multiplier;
+};

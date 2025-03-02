@@ -1,7 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ffmpegManager } from '../../utils/ffmpeg/ffmpeg';
-import { calculateCenterPosition, calculateFitDimensions, cmpFloat } from '@/utils/common';
+import { ffmpegManager } from '../../utils/ffmpeg/manager';
+import {
+    calculateCenterPosition,
+    calculateFitDimensions,
+    cmpFloat,
+    fixFloat,
+} from '@/utils/common';
 import useVideoTrackStore from '@/store/useVideoTrackStore';
+import { getVideoFrameIndexByTimestamp } from '@/utils/ffmpeg/utils';
 
 interface IProps {
     width: number;
@@ -61,25 +67,32 @@ export default function CanvasPlayer(props: IProps) {
 
     const clearTimer = () => {
         frameIndex.current = 1;
-        frameTimer.current && clearInterval(frameTimer.current);
+        clearInterval(frameTimer.current);
         frameTimer.current = undefined;
     };
 
     /**
-     * @todo 处理中途
+     * @todo 可能出现定时器违背clear的情况
      */
     const genPlayFrame = async (time: number) => {
         if (!canvasRef.current || !videoFile) return;
 
+        console.log('genPlayFrame', time);
+        const { startPFrameTimestamp, frameIndex: FixedFrameIndex } = getVideoFrameIndexByTimestamp(
+            time,
+            fps,
+        );
+        frameIndex.current = FixedFrameIndex;
+
         const { firstFrame } = await ffmpegManager.extractFrame({
             inputFile: videoFile,
-            time: time,
+            time: startPFrameTimestamp,
             w: videoResolution?.width,
             h: videoResolution?.height,
             fps,
+            frameIndex: frameIndex.current,
         });
 
-        ++frameIndex.current;
         curPlayTime.current += frameInterval;
         renderFrame(firstFrame);
 
@@ -87,7 +100,7 @@ export default function CanvasPlayer(props: IProps) {
             try {
                 const frameBlob = await ffmpegManager.getPlayFrame({
                     inputFile: videoFile,
-                    time,
+                    time: startPFrameTimestamp,
                     frameIndex: ++frameIndex.current,
                 });
                 setCurrentTime(curPlayTime.current);
@@ -101,12 +114,13 @@ export default function CanvasPlayer(props: IProps) {
                 ) {
                     clearTimer();
                     if (!cmpFloat(duration, curPlayTime.current)) {
-                        genPlayFrame(curPlayTime.current / 1000);
+                        genPlayFrame(fixFloat(curPlayTime.current / 1000, 3));
                     } else {
                         curPlayTime.current = 0;
                     }
                 }
             } catch (error) {
+                console.log('error', error);
                 curPlayTime.current = 0;
                 stop();
             }
@@ -126,7 +140,7 @@ export default function CanvasPlayer(props: IProps) {
         if (!isPlaying) {
             clearTimer();
         } else {
-            genPlayFrame(curPlayTime.current);
+            genPlayFrame(fixFloat(curPlayTime.current / 1000, 3));
         }
     }, [isPlaying]);
 

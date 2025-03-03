@@ -38,7 +38,7 @@ export default function Media() {
 
     useEffect(() => {
         if (!isLoading) {
-            importMediaFile();
+            // importMediaFile();
         }
     }, [isLoading]);
 

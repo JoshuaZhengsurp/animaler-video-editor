@@ -8,6 +8,8 @@ import { useShallow } from 'zustand/react/shallow';
 import { toolType } from './config';
 import Media from './Media';
 import Audio from './Audio';
+import Text from './Text';
+import Drawer from './Drawer';
 
 export default function Sider() {
     const text = useSiderStore((state) => state.text);
@@ -21,9 +23,9 @@ export default function Sider() {
             <div className={style['display']}>
                 {type === toolType.VIDEO && <Media />}
                 {type === toolType.AUDIO && <Audio />}
-                {/* {type === toolType.DRAWER && <Media />}
-                {type === toolType.FILTERS && <Media />}
-                {type === toolType.TEXT && <Media />} */}
+                {type === toolType.TEXT && <Text />}
+                {type === toolType.DRAWER && <Drawer />}
+                {/* {type === toolType.FILTERS && <Media />}*/}
             </div>
         </>
     );

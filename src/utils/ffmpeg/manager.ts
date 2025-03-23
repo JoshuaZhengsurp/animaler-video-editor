@@ -166,7 +166,9 @@ class FFmpegManager {
      */
     async extractFrame({ inputFile, time, w = 0, h = 0, fps, frameIndex }: ExtractFrameOptions) {
         try {
-            console.log(time, fps);
+            /**
+             * 是否命中缓冲，命中缓冲则返回对应帧数据
+             */
             const isExistFrameDir = await this.checkDirExist(
                 this.resourcePath.playFrame,
                 `${time}`,

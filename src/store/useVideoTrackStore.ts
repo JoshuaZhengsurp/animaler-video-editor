@@ -11,6 +11,9 @@ interface VideoTrackState {
     timeLineCeilWidth: number;
     timeIntervalCeil: number;
 
+    // getter
+    getCurrentTime: () => number;
+
     // Actions
     setDuration: (duration: number) => void;
     setCurrentTime: (time: number) => void;
@@ -19,9 +22,9 @@ interface VideoTrackState {
     setTimeIntervalCeil: (t: number) => void;
 
     // 计算当前时间对应的像素位置
-    getCurrentPosition: (t: number) => number;
+    getCurrentPositionByTime: (t: number) => number;
     // 计算当前像素对应的时间戳
-    getCurrentTimestamp: (p: number) => number;
+    getCurrentPositionByPosition: (p: number) => number;
 }
 
 const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
@@ -37,7 +40,11 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
     setTimeLineCeilWidth: (ceil) => set({ timeLineCeilWidth: ceil }),
     setTimeIntervalCeil: (t) => set({ timeIntervalCeil: t }),
 
-    getCurrentPosition: (currentTime: number) => {
+    getCurrentTime: () => {
+        return get().currentTime;
+    },
+
+    getCurrentPositionByTime: (currentTime: number) => {
         const { timeIntervalCeil, timeLineCeilWidth } = get();
         if (currentTime === 0) {
             return 0;
@@ -45,7 +52,7 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
         return (currentTime / timeIntervalCeil) * timeLineCeilWidth;
     },
 
-    getCurrentTimestamp: (position: number) => {
+    getCurrentPositionByPosition: (position: number) => {
         const { timeIntervalCeil, timeLineCeilWidth, trackWidth } = get();
         if (position < 0 || position > trackWidth) {
             return -1;

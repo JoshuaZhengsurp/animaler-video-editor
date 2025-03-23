@@ -8,6 +8,8 @@ import TrackContent from '@/components/VideoTrack/TrackContent';
 
 import style from './index.module.scss';
 import useVideoTrackStore from '@/store/useVideoTrackStore';
+import { PlayState, useVideoPlayerStore } from '@/store/useVideoPlayerStore';
+import { debounce } from 'lodash';
 
 /**
  * @todo 通过canvas绘制播放视频
@@ -17,6 +19,7 @@ export default function Track() {
     const videoTrackStore = useVideoTrackStore();
     const currentTime = useVideoTrackStore((s) => s.currentTime);
     const videoList = useVideoStore((s) => s.videos);
+    const setPlayerState = useVideoPlayerStore((s) => s.setPlayState);
 
     const [pointerPosition, setPointerPosition] = useState(0);
 
@@ -24,24 +27,37 @@ export default function Track() {
 
     const isDragTimePointerEffect = useRef(false);
 
+    const debounceUpdatePlayerState = debounce(() => {
+        setPlayerState(PlayState.READY);
+    }, 100);
+
     const handleUpdateTimestamp = (position: number) => {
         if (position >= 0) {
             isDragTimePointerEffect.current = true;
-            const curTimestamp = videoTrackStore.getCurrentTimestamp(position);
+            const curTimestamp = videoTrackStore.getCurrentPositionByPosition(position);
             videoTrackStore.setCurrentTime(curTimestamp);
-            setPointerPosition(position);
+            setPlayerState(PlayState.PAUSE);
+            setPointerPosition(() => {
+                debounceUpdatePlayerState();
+                return position;
+            });
         }
     };
 
     const handleUpdatePosition = (timestamp: number) => {
         if (timestamp >= 0) {
-            const position = videoTrackStore.getCurrentPosition(timestamp);
+            const position = videoTrackStore.getCurrentPositionByTime(timestamp);
             setPointerPosition(position);
         }
     };
 
+    // 使用isDragTimePointerEffect目的是
     useEffect(() => {
-        // console.log('videoTrackStore.currentTime', videoTrackStore.currentTime);
+        // console.log(
+        //     'videoTrackStore.currentTime',
+        //     videoTrackStore.currentTime,
+        //     isDragTimePointerEffect.current,
+        // );
         if (!isDragTimePointerEffect.current) {
             handleUpdatePosition(videoTrackStore.currentTime);
         } else {

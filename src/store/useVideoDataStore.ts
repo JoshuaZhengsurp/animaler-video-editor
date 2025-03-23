@@ -3,6 +3,14 @@ import { ffmpegManager } from '@/utils/ffmpeg/manager';
 import { formatDurationTime, parseVideoResolution } from '@/utils/common';
 
 type PathType = string;
+
+export enum VideoLoadStatus {
+    IDLE = 'idle',
+    LOADING = 'loading',
+    DONE = 'done',
+    ERROR = 'error',
+}
+
 export interface VideoItem {
     id: string;
     name: string;
@@ -18,7 +26,7 @@ export interface VideoItem {
         ratio: number;
     };
     pFrameMap: Record<string | number, PathType>;
-    // status: 'idle' | 'processing' | 'done' | 'error';
+    status: VideoLoadStatus;
     // error?: string;
 }
 
@@ -86,17 +94,12 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
                             info,
                             duration: formatDurationTime(info?.input?.Duration),
                             resolution: parseVideoResolution(info?.input?.videoInfo?.[1]),
+                            status: VideoLoadStatus.DONE,
                         },
                         ...state.videos,
                     ] as VideoItem[],
                 }));
             }
-            // 更新视频信息
-            // set(state => ({
-            //     videos: state.videos.map(video => {
-            //         return video;
-            //     })
-            // }));
         } catch (error) {
             console.error('Failed to add video:', error);
         }

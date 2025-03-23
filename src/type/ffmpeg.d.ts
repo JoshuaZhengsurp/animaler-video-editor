@@ -30,6 +30,14 @@ interface ExtractFrameOptions {
     outputFile?: string;
     w: number;
     h: number;
+    fps: number;
+    frameIndex?: number;
+}
+
+interface GetPlayFrameOptions {
+    inputFile: string;
+    time: number;
+    frameIndex: number;
 }
 
 interface VideoFrame {
@@ -40,4 +48,10 @@ interface VideoFrame {
 interface AudioData {
     waveform: number[]; // 音频波形数据
     duration: number;
+}
+
+type PathType = string;
+interface PFrameMap {
+    [K: number]: PathType;
+    '#FRAME#'?: number[];
 }

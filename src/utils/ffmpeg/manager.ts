@@ -1,8 +1,14 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
-import { IS_SHOW_FFMPEG_LOG, IS_SHOW_TRANCODE_STATUS } from './const';
-import { getMetaDataWithTranMessage, TransLogProcessState } from './common';
+import {
+    IS_SHOW_FFMPEG_LOG,
+    IS_SHOW_TRANCODE_STATUS,
+    PATH_CONFIG,
+    START_FRAME_INDEX_KEY,
+} from '../const';
+import { getMetaDataWithTranMessage, TransLogProcessState } from './utils';
 import { nanoid } from 'nanoid';
+import { genPlayFrame, transcodeFromAvi2Mp4 } from './command';
 
 /**
  * @description
@@ -17,6 +23,7 @@ class FFmpegManager {
     public isTranCodeShow: boolean = false;
     //
     public metadata: Record<string, any> = {};
+    public videoPFrameMap: Map<string, PFrameMap> = new Map(); // 映射播放帧
 
     private tranCoding = false;
     private currentTranVideoId: string = '';
@@ -24,6 +31,7 @@ class FFmpegManager {
         data: this.metadata,
         last: null,
     };
+    private resourcePath = PATH_CONFIG;
 
     constructor() {
         this.ffmpeg = new FFmpeg();
@@ -42,10 +50,43 @@ class FFmpegManager {
                 workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript'),
                 wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
             });
+            await this.mkdirList(this.resourcePath);
             this.isLoading = true;
         } catch (error) {
             console.error('Failed to init ffmpeg', error);
         }
+    }
+
+    /* 创建ffmepg资源目录 */
+    async mkdirList(dirList: string[] | Record<string, string>) {
+        let list = dirList as string[];
+        if (!Array.isArray(dirList)) {
+            list = [];
+            for (const key in dirList) {
+                list.push(dirList[key]);
+            }
+        }
+        const promiseList = list.map((dir) => this.mkdir(dir));
+        return Promise.all(promiseList);
+    }
+
+    async mkdir(dir: string) {
+        return this.ffmpeg.createDir(dir);
+    }
+
+    async checkDirExist(path: string, targetDir: string) {
+        const list = await this.ffmpeg.listDir(path);
+        console.log('checkDirExist0', list);
+        // debugger;
+        if (list.length > 2) {
+            const len = list.length;
+            for (let i = 2; i < len; ++i) {
+                if (list[i].name === targetDir && list[i].isDir) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /* 读取媒体文件 */
@@ -65,7 +106,9 @@ class FFmpegManager {
         const inputFile = `${this.currentTranVideoId}_${fileName || ''}_i.avi`;
         const outputFile = `${this.currentTranVideoId}_${fileName || ''}_o.mp4`;
 
-        console.log('currentTranVideoId', this.currentTranVideoId, fileName);
+        const { commands } = transcodeFromAvi2Mp4(inputFile, outputFile);
+
+        // console.log('currentTranVideoId', this.currentTranVideoId, fileName);
 
         try {
             await ffmpeg.deleteFile(inputFile);
@@ -85,62 +128,17 @@ class FFmpegManager {
             console.log('[log]', '开始转码...');
             this.tranCoding = true;
 
-            await ffmpeg.exec(
-                [
-                    '-i',
-                    inputFile,
-                    '-c:v',
-                    'libx264',
-                    '-preset',
-                    'ultrafast',
-                    '-pix_fmt',
-                    'yuv420p', // 强制使用 yuv420p 像素格式
-                    '-vf',
-                    'format=yuv420p', // 添加视频过滤器确保正确的格式转换
-                    '-threads',
-                    '1', // 使用单线程处理
-                    '-g',
-                    '35', // GOP大小设置为帧率
-                    '-movflags',
-                    '+faststart',
-                    '-frag_duration',
-                    '1000',
-                    '-y',
-                    outputFile,
-                ],
-                1200000,
-            );
+            await ffmpeg.exec(commands, 1200000);
 
             const fileData = await ffmpeg.readFile(outputFile);
-            // await ffmpeg.writeFile(outputFile, fileData);
             const data = new Uint8Array(fileData as ArrayBuffer);
-            // await ffmpeg.writeFile(outputFile, data);
             console.log('result finally', this.metadata);
             return { data, id: this.currentTranVideoId, outputFile, info: this.metadata };
         } catch (error) {
-            console.error('transvideo failed', error);
+            console.error('transcode failed', error);
         } finally {
             this.tranCoding = false;
             this.currentTranVideoId = '';
-        }
-    }
-
-    async convertToMp3(inputFileName: string, outputFileName: string) {
-        try {
-            await this.ffmpeg.exec([
-                '-i',
-                inputFileName,
-                '-vn',
-                '-acodec',
-                'libmp3lame',
-                '-q:a',
-                '2',
-                outputFileName,
-            ]);
-            return await this.ffmpeg.readFile(outputFileName);
-        } catch (error) {
-            console.error('Failed to convert to MP3:', error);
-            throw error;
         }
     }
 
@@ -163,17 +161,78 @@ class FFmpegManager {
         return timeout ? this.ffmpeg.exec(args, timeout) : this.ffmpeg.exec(args);
     }
 
-    // 获取视频某一帧，通过canvas播放视频
-
-    async getVideoDuration(path: string) {
+    /**
+     * @todo 对帧需要进行唯一标识
+     */
+    async extractFrame({ inputFile, time, w = 0, h = 0, fps, frameIndex }: ExtractFrameOptions) {
         try {
-            const res = await this.ffmpeg.exec(['-i', path, '-f', 'null', '-']);
-            console.log('getVideoDuration', res);
-            return this.metadata.duration;
+            console.log(time, fps);
+            const isExistFrameDir = await this.checkDirExist(
+                this.resourcePath.playFrame,
+                `${time}`,
+            );
+            if (isExistFrameDir) {
+                const frameBlob = await this.getPlayFrame({
+                    inputFile,
+                    time,
+                    frameIndex: frameIndex ?? 1,
+                });
+                return {
+                    firstFrame: frameBlob,
+                };
+            }
+            await this.mkdir(`${this.resourcePath.playFrame}${time}/`);
+
+            /**
+             * @todo 关于#FRAME#，是否需要保留，需再考虑
+             */
+            if (!this.videoPFrameMap.has(inputFile)) {
+                this.videoPFrameMap.set(inputFile, {
+                    [START_FRAME_INDEX_KEY]: [],
+                });
+            }
+            /**
+             * 假设帧的解析是有序的
+             */
+            const map = this.videoPFrameMap.get(inputFile)!;
+            map[time] = `${this.resourcePath.playFrame}${time}/`;
+            map[START_FRAME_INDEX_KEY]?.push(time);
+
+            const { commands, playFramePrefix } = genPlayFrame(
+                inputFile,
+                `${this.resourcePath.playFrame}${time}/`,
+                { w, h },
+                time,
+                fps,
+            );
+
+            await this.ffmpeg.exec(commands);
+
+            console.log(`${playFramePrefix}${frameIndex ?? 1}.jpg`);
+
+            const firstFrameData = await this.ffmpeg.readFile(
+                `${playFramePrefix}${frameIndex ?? 1}.jpg`,
+            );
+            return {
+                playFramePrefix,
+                firstFrame: new Blob([firstFrameData], { type: 'image/jpeg' }),
+            };
         } catch (error) {
-            console.error('Failed to get video duration:', error);
+            console.error('Failed to extract frame:', error);
             throw error;
         }
+    }
+
+    /**
+     * @todo 建立预缓存机制，有效利用内存空间的同时减缓缓冲时间
+     */
+    async getPlayFrame({ inputFile, time, frameIndex }: GetPlayFrameOptions) {
+        /**
+         * @todo 如果存在这个切片走缓存
+         */
+        const framePath = `${this.resourcePath.playFrame}${time}/pic-${time}-${frameIndex}.jpg`;
+        console.log('getPlayFrame', framePath);
+        return new Blob([await this.ffmpeg.readFile(framePath)], { type: 'image/jpeg' });
     }
 
     private showLog() {
@@ -232,42 +291,38 @@ class FFmpegManager {
         }
     }
 
-    async extractFrame({
-        inputFile,
-        time,
-        w = 0,
-        h = 0,
-        outputFile = 'frame.jpg',
-    }: ExtractFrameOptions) {
+    /**
+     * @deprecated 目前不采用这种方式
+     */
+    async convertToMp3(inputFileName: string, outputFileName: string) {
         try {
-            console.log('extractFrame', inputFile, w, h);
             await this.ffmpeg.exec([
                 '-i',
-                inputFile,
-                '-vf',
-                `select=eq(n\\,${0})`,
-                '-s',
-                `${w}x${h}`,
-                '-vframes',
-                `1`,
-                outputFile,
-                // '-ss',
-                // time.toString(),
-                // '-i',
-                // inputFile,
-                // '-vframes',
-                // '1',
-                // '-q:v',
-                // '2',
-                // outputFile,
+                inputFileName,
+                '-vn',
+                '-acodec',
+                'libmp3lame',
+                '-q:a',
+                '2',
+                outputFileName,
             ]);
-
-            console.log('extractFrame');
-
-            const data = await this.ffmpeg.readFile(outputFile);
-            return new Blob([data], { type: 'image/jpeg' });
+            return await this.ffmpeg.readFile(outputFileName);
         } catch (error) {
-            console.error('Failed to extract frame:', error);
+            console.error('Failed to convert to MP3:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * @deprecated 目前不采用这种方式获取视频信息
+     */
+    async getVideoDuration(path: string) {
+        try {
+            const res = await this.ffmpeg.exec(['-i', path, '-f', 'null', '-']);
+            console.log('getVideoDuration', res);
+            return this.metadata.duration;
+        } catch (error) {
+            console.error('Failed to get video duration:', error);
             throw error;
         }
     }

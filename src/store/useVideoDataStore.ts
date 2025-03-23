@@ -1,6 +1,15 @@
 import { create } from 'zustand';
-import { ffmpegManager } from '@/utils/ffmpeg';
+import { ffmpegManager } from '@/utils/ffmpeg/manager';
 import { formatDurationTime, parseVideoResolution } from '@/utils/common';
+
+type PathType = string;
+
+export enum VideoLoadStatus {
+    IDLE = 'idle',
+    LOADING = 'loading',
+    DONE = 'done',
+    ERROR = 'error',
+}
 
 export interface VideoItem {
     id: string;
@@ -16,14 +25,15 @@ export interface VideoItem {
         height: number | string;
         ratio: number;
     };
-    // status: 'idle' | 'processing' | 'done' | 'error';
+    pFrameMap: Record<string | number, PathType>;
+    status: VideoLoadStatus;
     // error?: string;
 }
 
 interface VideoInfo {
     origin: string;
     type: string;
-    data: Uint8Array<ArrayBuffer>;
+    data: Uint8Array<ArrayBuffer> | string;
 }
 
 interface VideoStore {
@@ -47,26 +57,12 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
         try {
             const fileName = origin.split(/[\\/]/).pop() || '';
             const fileSuffix = fileName.split('.').pop() || '';
-            // const id = crypto.randomUUID();
 
             console.log('origin', origin, fileName);
 
             /**
              * @todo 视频解码状态描述
              */
-            // 先添加视频项到列表
-            // set(state => ({
-            //     videos: [
-            //         ...state.videos,
-            //         {
-            //             id,
-            //             name: fileName,
-            //             path: origin,
-            //             status: 'processing',
-            //         },
-            //     ],
-            // }));
-
             // 初始化 FFmpeg（如果需要）
             if (!ffmpegManager.isLoading) {
                 await ffmpegManager.init();
@@ -98,24 +94,14 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
                             info,
                             duration: formatDurationTime(info?.input?.Duration),
                             resolution: parseVideoResolution(info?.input?.videoInfo?.[1]),
+                            status: VideoLoadStatus.DONE,
                         },
                         ...state.videos,
                     ] as VideoItem[],
                 }));
             }
-            // 更新视频信息
-            // set(state => ({
-            //     videos: state.videos.map(video => {
-            //         return video;
-            //     })
-            // }));
         } catch (error) {
             console.error('Failed to add video:', error);
-            // set(state => ({
-            //     videos: state.videos.map(video =>
-            //         video.path === path ? { ...video, status: 'error', error: error.message } : video,
-            //     ),
-            // }));
         }
     },
 
@@ -132,6 +118,19 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
     getVideoDuration: (id: string) => {
         const videoItem = get().videos.filter((viodeItem) => viodeItem.id === id)?.[0];
         return get().getVideoDurationWithVideoItem(videoItem);
+    },
+
+    updatePFrameMap: (id: string, frameMap: Record<string | number, PathType>) => {
+        set((state) => ({
+            videos: state.videos.map((video) =>
+                video.id === id ? { ...video, pFrameMap: frameMap } : video,
+            ),
+        }));
+    },
+
+    getPFrameMap: (id: string) => {
+        const video = get().videos.find((video) => video.id === id);
+        return video?.pFrameMap;
     },
 
     // updateVideoStatus: (id: string, status: VideoItem['status'], error?: string) => {

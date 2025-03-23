@@ -1,46 +1,46 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import CanvasPlayer from '@/components/VideoPlayer';
-import { useVideoStore } from '@/store/useVideoDataStore';
+import { useVideoStore, VideoLoadStatus } from '@/store/useVideoDataStore';
 import { calculateFitDimensions } from '@/utils/common';
+import { PlayState, useVideoPlayerStore } from '@/store/useVideoPlayerStore';
 
 /**
  * @todo 通过canvas绘制播放视频
  */
 
-interface Iprops {
+interface IProps {
     playerWHRate: number[];
 }
 
-const PADDING_BUTTOM_EXTRA = 20;
+const PADDING_BUTTON_EXTRA = 20;
 
-export default function VideoPlayer(props: Iprops) {
+export default function VideoPlayer(props: IProps) {
     const { playerWHRate } = props;
     const [canvasPlayerWH, setCanvasPlayerWH] = useState<number[]>([]);
     const playerRef = useRef<HTMLDivElement>(null);
 
     const videoList = useVideoStore((s) => s.videos);
+    const setPlayState = useVideoPlayerStore((s) => s.setPlayState);
     const mainVideo = useMemo(() => videoList?.[0], [videoList]);
 
     /**
      * @todo 使用VideoPlayerStore，更新width height数据
      */
 
-    // console.log('videoList', videoList);
-
     const getCanvasPlayerWH = () => {
         const [width, height] = playerWHRate;
         const ratio = width / height;
         const playerWidth = playerRef.current?.clientWidth || 0;
-        const playerHeight = (playerRef.current?.clientHeight || 0) - PADDING_BUTTOM_EXTRA;
-        console.log(
-            'getCanvasPlayerWH',
-            ratio,
-            playerWidth / playerHeight,
-            playerRef.current?.clientHeight,
-            playerHeight,
-            playerWidth,
-            calculateFitDimensions([playerWidth, playerHeight], playerWidth / playerHeight, ratio),
-        );
+        const playerHeight = (playerRef.current?.clientHeight || 0) - PADDING_BUTTON_EXTRA;
+        // console.log(
+        //     'getCanvasPlayerWH',
+        //     ratio,
+        //     playerWidth / playerHeight,
+        //     playerRef.current?.clientHeight,
+        //     playerHeight,
+        //     playerWidth,
+        //     calculateFitDimensions([playerWidth, playerHeight], playerWidth / playerHeight, ratio),
+        // );
         if (playerWidth && playerHeight) {
             return calculateFitDimensions(
                 [playerWidth, playerHeight],
@@ -54,6 +54,13 @@ export default function VideoPlayer(props: Iprops) {
     useEffect(() => {
         setCanvasPlayerWH(getCanvasPlayerWH() || []);
     }, [playerWHRate]);
+
+    // 假设初始数据加载完了
+    useEffect(() => {
+        if (mainVideo?.status === VideoLoadStatus.DONE) {
+            setPlayState(PlayState.READY);
+        }
+    }, [mainVideo]);
 
     return (
         <div className='w-full h-full flex justify-center' ref={playerRef}>

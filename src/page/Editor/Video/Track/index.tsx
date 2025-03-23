@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useVideoStore } from '@/store/useVideoDataStore';
 
 import Duration from '@/components/VideoTrack/Duration';
@@ -8,6 +8,8 @@ import TrackContent from '@/components/VideoTrack/TrackContent';
 
 import style from './index.module.scss';
 import useVideoTrackStore from '@/store/useVideoTrackStore';
+import { PlayState, useVideoPlayerStore } from '@/store/useVideoPlayerStore';
+import { debounce } from 'lodash';
 
 /**
  * @todo 通过canvas绘制播放视频
@@ -15,20 +17,53 @@ import useVideoTrackStore from '@/store/useVideoTrackStore';
 
 export default function Track() {
     const videoTrackStore = useVideoTrackStore();
+    const currentTime = useVideoTrackStore((s) => s.currentTime);
     const videoList = useVideoStore((s) => s.videos);
+    const setPlayerState = useVideoPlayerStore((s) => s.setPlayState);
 
     const [pointerPosition, setPointerPosition] = useState(0);
 
     const mainVideo = useMemo(() => videoList[0] || null, [videoList]);
 
+    const isDragTimePointerEffect = useRef(false);
+
+    const debounceUpdatePlayerState = debounce(() => {
+        setPlayerState(PlayState.READY);
+    }, 100);
+
     const handleUpdateTimestamp = (position: number) => {
         if (position >= 0) {
-            const curTimestamp = videoTrackStore.getCurrentTimestamp(position);
-            // console.log(position, curTimestamp);
+            isDragTimePointerEffect.current = true;
+            const curTimestamp = videoTrackStore.getCurrentPositionByPosition(position);
             videoTrackStore.setCurrentTime(curTimestamp);
+            setPlayerState(PlayState.PAUSE);
+            setPointerPosition(() => {
+                debounceUpdatePlayerState();
+                return position;
+            });
+        }
+    };
+
+    const handleUpdatePosition = (timestamp: number) => {
+        if (timestamp >= 0) {
+            const position = videoTrackStore.getCurrentPositionByTime(timestamp);
             setPointerPosition(position);
         }
     };
+
+    // 使用isDragTimePointerEffect目的是
+    useEffect(() => {
+        // console.log(
+        //     'videoTrackStore.currentTime',
+        //     videoTrackStore.currentTime,
+        //     isDragTimePointerEffect.current,
+        // );
+        if (!isDragTimePointerEffect.current) {
+            handleUpdatePosition(videoTrackStore.currentTime);
+        } else {
+            isDragTimePointerEffect.current = false;
+        }
+    }, [currentTime]);
 
     useEffect(() => {
         let duration = 0;

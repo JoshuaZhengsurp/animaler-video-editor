@@ -11,3 +11,5 @@ export const PATH_CONFIG = {
     logPath: '/logs/', // 命令日志文件目录
     wavePath: '/wave/', // 音频波形文件目录
 };
+
+export const START_FRAME_INDEX_KEY = '#FRAME#';

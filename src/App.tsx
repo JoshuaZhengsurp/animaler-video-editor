@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 
-import { ffmpegManager } from './utils/ffmpeg';
+import { ffmpegManager } from './utils/ffmpeg/manager';
 import Editor from './page/Editor';
 
 import './App.css';

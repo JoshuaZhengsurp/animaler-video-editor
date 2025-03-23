@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 
-enum PlayState {
+export enum PlayState {
     NONE,
     PLAY,
     PAUSE,
     LOADING,
+    READY, // 可以加载首帧封面
 }
 
 interface VideoPlayerStore {

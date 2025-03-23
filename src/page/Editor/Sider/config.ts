@@ -31,16 +31,16 @@ export const toolConfigList: ToolConfig[] = [
         text: '音频库',
     },
     {
+        type: toolType.TEXT,
+        text: '文字',
+    },
+    {
         type: toolType.DRAWER,
-        text: '素材库',
+        text: '图片库',
     },
     {
         type: toolType.FILTERS,
         text: '滤波',
-    },
-    {
-        type: toolType.TEXT,
-        text: '文字',
     },
 ];
 

@@ -1,5 +1,3 @@
-// import type { TrackItem, VideoTractItem, AudioTractItem } from '@/stores/trackState';
-
 /**
  * 根据视频名称生成 AAC 音频文件路径
  * @param path - 目录路径

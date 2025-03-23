@@ -7,20 +7,13 @@ import { useSiderStore } from '@/store/useSiderStore';
 import { useShallow } from 'zustand/react/shallow';
 import { toolType } from './config';
 import Media from './Media';
+import Audio from './Audio';
+import Text from './Text';
+import Drawer from './Drawer';
 
 export default function Sider() {
-    // const { component, text } = useSiderStore(
-    //     useShallow(state => ({
-    //         component: state.component,
-    //         text: state.text,
-    //     })),
-    // );
-
-    // const component = useSiderStore(state => state.component);
-    const text = useSiderStore(state => state.text);
-    const type = useSiderStore(state => state.type);
-
-    console.log('sider', text);
+    const text = useSiderStore((state) => state.text);
+    const type = useSiderStore((state) => state.type);
 
     return (
         <>
@@ -29,10 +22,10 @@ export default function Sider() {
             </div>
             <div className={style['display']}>
                 {type === toolType.VIDEO && <Media />}
-                {/* {type === toolType.AUDIO && <Media />}
-                {type === toolType.DRAWER && <Media />}
-                {type === toolType.FILTERS && <Media />}
-                {type === toolType.TEXT && <Media />} */}
+                {type === toolType.AUDIO && <Audio />}
+                {type === toolType.TEXT && <Text />}
+                {type === toolType.DRAWER && <Drawer />}
+                {/* {type === toolType.FILTERS && <Media />}*/}
             </div>
         </>
     );

@@ -5,9 +5,11 @@ import {
     calculateFitDimensions,
     cmpFloat,
     fixFloat,
+    fixPlayerFrameTime,
 } from '@/utils/common';
 import useVideoTrackStore from '@/store/useVideoTrackStore';
 import { getVideoFrameIndexByTimestamp } from '@/utils/ffmpeg/utils';
+import { PlayState, useVideoPlayerStore } from '@/store/useVideoPlayerStore';
 
 interface IProps {
     width: number;
@@ -20,10 +22,12 @@ interface IProps {
 export default function CanvasPlayer(props: IProps) {
     const { width, height, videoFile, fps = 30, videoResolution } = props;
     const setCurrentTime = useVideoTrackStore((s) => s.setCurrentTime);
+    const getCurrentTime = useVideoTrackStore((s) => s.getCurrentTime);
     const duration = useVideoTrackStore((s) => s.duration); // 单位是ms，需要转换为s
+    const playerState = useVideoPlayerStore((s) => s.playState);
+    const setPlayState = useVideoPlayerStore((s) => s.setPlayState);
     const curPlayTime = useRef(0); // 当前播放的时间节点
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
 
     const frameIndex = useRef(0);
     const frameTimer = useRef<NodeJS.Timeout>();
@@ -50,6 +54,12 @@ export default function CanvasPlayer(props: IProps) {
         return [width, height, 0, 0];
     }, [width, height, videoResolution]);
 
+    const clearTimer = () => {
+        frameIndex.current = 1;
+        clearInterval(frameTimer.current);
+        frameTimer.current = undefined;
+    };
+
     const renderFrame = async (playFrame: Blob) => {
         const img = new Image();
         img.src = URL.createObjectURL(playFrame);
@@ -65,19 +75,9 @@ export default function CanvasPlayer(props: IProps) {
         };
     };
 
-    const clearTimer = () => {
-        frameIndex.current = 1;
-        clearInterval(frameTimer.current);
-        frameTimer.current = undefined;
-    };
+    const genFirstPlayFrame = async (time: number) => {
+        if (!canvasRef.current || !videoFile) return null;
 
-    /**
-     * @todo 可能出现定时器违背clear的情况
-     */
-    const genPlayFrame = async (time: number) => {
-        if (!canvasRef.current || !videoFile) return;
-
-        console.log('genPlayFrame', time);
         const { startPFrameTimestamp, frameIndex: FixedFrameIndex } = getVideoFrameIndexByTimestamp(
             time,
             fps,
@@ -92,15 +92,26 @@ export default function CanvasPlayer(props: IProps) {
             fps,
             frameIndex: frameIndex.current,
         });
+        renderFrame(firstFrame);
+        return {
+            startPFrameTimestamp,
+        };
+    };
+
+    /**
+     * @todo 可能出现定时器未被clear的情况
+     */
+    const genPlayFrame = async (time: number) => {
+        const ret = await genFirstPlayFrame(time);
+        if (!ret) return;
 
         curPlayTime.current += frameInterval;
-        renderFrame(firstFrame);
 
         frameTimer.current = setInterval(async () => {
             try {
                 const frameBlob = await ffmpegManager.getPlayFrame({
-                    inputFile: videoFile,
-                    time: startPFrameTimestamp,
+                    inputFile: videoFile!,
+                    time: ret.startPFrameTimestamp,
                     frameIndex: ++frameIndex.current,
                 });
                 setCurrentTime(curPlayTime.current);
@@ -108,7 +119,7 @@ export default function CanvasPlayer(props: IProps) {
                 renderFrame(frameBlob);
                 // console.log(duration, curPlayTime.current);
                 if (
-                    !isPlaying ||
+                    playerState !== PlayState.PLAY ||
                     cmpFloat(duration, curPlayTime.current) ||
                     frameIndex.current >= fps
                 ) {
@@ -128,21 +139,37 @@ export default function CanvasPlayer(props: IProps) {
     };
 
     const play = () => {
-        if (!videoFile || isPlaying) return;
-        setIsPlaying(true);
+        if (!videoFile || playerState === PlayState.PLAY) return;
+        setPlayState(PlayState.PLAY);
     };
 
     const stop = () => {
-        setIsPlaying(false);
+        setPlayState(PlayState.PAUSE);
     };
 
     useEffect(() => {
-        if (!isPlaying) {
-            clearTimer();
-        } else {
+        if (playerState === PlayState.PLAY) {
+            const { fixedTimestamp, hasFix } = fixPlayerFrameTime(getCurrentTime(), frameInterval);
+            curPlayTime.current = fixedTimestamp;
+            if (hasFix) {
+                setCurrentTime(fixedTimestamp);
+            }
             genPlayFrame(fixFloat(curPlayTime.current / 1000, 3));
+        } else {
+            curPlayTime.current && clearTimer();
+            if (playerState === PlayState.READY) {
+                const { fixedTimestamp, hasFix } = fixPlayerFrameTime(
+                    getCurrentTime(),
+                    frameInterval,
+                );
+                curPlayTime.current = fixedTimestamp;
+                if (hasFix) {
+                    setCurrentTime(fixedTimestamp);
+                }
+                genFirstPlayFrame(fixFloat(curPlayTime.current / 1000, 3));
+            }
         }
-    }, [isPlaying]);
+    }, [playerState]);
 
     useEffect(() => {}, []);
 
@@ -158,8 +185,11 @@ export default function CanvasPlayer(props: IProps) {
                 className='absolute top-0 left-0'
             />
             <div className='absolute bottom-4 left-4 right-4 flex gap-2'>
-                <button onClick={isPlaying ? stop : play} className='px-4 py-2 bg-white/10 rounded'>
-                    {isPlaying ? 'Stop' : 'Play'}
+                <button
+                    onClick={playerState === PlayState.PLAY ? stop : play}
+                    className='px-4 py-2 bg-white/10 rounded'
+                >
+                    {playerState === PlayState.PLAY ? 'Stop' : 'Play'}
                 </button>
                 <div className='text-white'>
                     {Math.floor(curPlayTime.current / 1000)}s / {Math.floor(duration / 1000)}s

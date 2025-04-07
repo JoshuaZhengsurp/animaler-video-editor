@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import CanvasPlayer from '@/components/VideoPlayer';
-import { useVideoStore } from '@/store/useVideoDataStore';
+import { useVideoStore, VideoLoadStatus } from '@/store/useVideoDataStore';
 import { calculateFitDimensions } from '@/utils/common';
+import { PlayState, useVideoPlayerStore } from '@/store/useVideoPlayerStore';
 
 /**
  * @todo 通过canvas绘制播放视频
@@ -19,13 +20,12 @@ export default function VideoPlayer(props: IProps) {
     const playerRef = useRef<HTMLDivElement>(null);
 
     const videoList = useVideoStore((s) => s.videos);
+    const setPlayState = useVideoPlayerStore((s) => s.setPlayState);
     const mainVideo = useMemo(() => videoList?.[0], [videoList]);
 
     /**
      * @todo 使用VideoPlayerStore，更新width height数据
      */
-
-    // console.log('videoList', videoList);
 
     const getCanvasPlayerWH = () => {
         const [width, height] = playerWHRate;
@@ -54,6 +54,13 @@ export default function VideoPlayer(props: IProps) {
     useEffect(() => {
         setCanvasPlayerWH(getCanvasPlayerWH() || []);
     }, [playerWHRate]);
+
+    // 假设初始数据加载完了
+    useEffect(() => {
+        if (mainVideo?.status === VideoLoadStatus.DONE) {
+            setPlayState(PlayState.READY);
+        }
+    }, [mainVideo]);
 
     return (
         <div className='w-full h-full flex justify-center' ref={playerRef}>

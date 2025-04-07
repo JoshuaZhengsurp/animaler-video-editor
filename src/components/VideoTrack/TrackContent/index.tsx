@@ -24,10 +24,10 @@ export default function VideoTrack(props: VideoTrackProps) {
      * @todo 暂时这么写
      */
     const duration = useVideoTrackStore((s) => s.duration);
-    const getCurrentPosition = useVideoTrackStore((s) => s.getCurrentPosition);
+    const getCurrentPositionByTime = useVideoTrackStore((s) => s.getCurrentPositionByTime);
 
     const trackWidth = useMemo(() => {
-        return `${getCurrentPosition(duration)}px` || '0';
+        return `${getCurrentPositionByTime(duration)}px` || '0';
     }, [duration]);
 
     const mockTracks: Track[] = [

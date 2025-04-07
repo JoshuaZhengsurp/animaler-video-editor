@@ -6,7 +6,7 @@ import {
     PATH_CONFIG,
     START_FRAME_INDEX_KEY,
 } from '../const';
-import { getMetaDataWithTranMessage, TransLogProcessState } from '../common';
+import { getMetaDataWithTranMessage, TransLogProcessState } from './utils';
 import { nanoid } from 'nanoid';
 import { genPlayFrame, transcodeFromAvi2Mp4 } from './command';
 

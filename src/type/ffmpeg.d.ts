@@ -12,6 +12,7 @@ interface TranCodeOptions {
     type: string;
     uri: string | Uint8Array<ArrayBufferLike>;
     fileName: string;
+    fileSuffix: string;
     execCmd: Array<string> | string;
     outputFile: string;
     [propName: string]: unknown;

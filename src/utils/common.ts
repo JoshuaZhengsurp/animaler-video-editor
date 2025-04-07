@@ -260,10 +260,13 @@ export const calculateCenterPosition = (
 
     return [x, y];
 };
-// export const splitFileNameAndSuffix = (name: string) => {
-//     const fileName = origin.split(/[\\/]/).pop() || '';
-//     const fileSuffix = fileName.split('.').pop() || '';
-// }
+
+/**
+ * @description 获取文件拓展名
+ */
+export const getFileNameSuffix = (name: string) => {
+    return name.split('.').pop() || '';
+};
 
 /**
  * @description 比较浮点数；差值1e-4认为等于

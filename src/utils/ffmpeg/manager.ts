@@ -89,26 +89,20 @@ class FFmpegManager {
         return false;
     }
 
-    /* 读取媒体文件 */
-    async readMediaFile(file: File) {
-        const data = await file.arrayBuffer();
-        const fileName = file.name;
-        await this.ffmpeg.writeFile(fileName, new Uint8Array(data));
-        return fileName;
-    }
-
-    /* 转码，例如mp4 */
+    /**
+     * @description
+     * 初始化导入视频
+     * 暂不开放avi转MP4
+     */
     async transcode(options: Partial<TranCodeOptions>) {
         this.currentTranVideoId = nanoid(9);
-        const { fileName, type: originType } = options;
+        const { fileName, type: originType, fileSuffix } = options;
         const ffmpeg = this.ffmpeg;
 
-        const inputFile = `${this.currentTranVideoId}_${fileName || ''}_i.avi`;
-        const outputFile = `${this.currentTranVideoId}_${fileName || ''}_o.mp4`;
+        const inputFile = `${this.resourcePath.resourcePath}${this.currentTranVideoId}_i_${fileName || ''}`;
+        const outputFile = `${this.resourcePath.resourcePath}${this.currentTranVideoId}_o_${fileName || ''}.mp4`;
 
         const { commands } = transcodeFromAvi2Mp4(inputFile, outputFile);
-
-        // console.log('currentTranVideoId', this.currentTranVideoId, fileName);
 
         try {
             await ffmpeg.deleteFile(inputFile);
@@ -155,10 +149,6 @@ class FFmpegManager {
                 console.warn(`Failed to delete file ${fileName}:`, error);
             }
         }
-    }
-
-    async exec(args: string[], timeout: number) {
-        return timeout ? this.ffmpeg.exec(args, timeout) : this.ffmpeg.exec(args);
     }
 
     /**
@@ -327,6 +317,10 @@ class FFmpegManager {
             console.error('Failed to get video duration:', error);
             throw error;
         }
+    }
+
+    async exec(args: string[], timeout: number) {
+        return timeout ? this.ffmpeg.exec(args, timeout) : this.ffmpeg.exec(args);
     }
 }
 

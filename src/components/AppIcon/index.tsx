@@ -10,7 +10,5 @@ interface IProps {
 }
 
 export default function Icon(props: IProps) {
-    console.log(props);
-
-    return <img src={icon} alt="" {...props} />;
+    return <img src={icon} alt='' {...props} />;
 }

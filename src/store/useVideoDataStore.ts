@@ -50,12 +50,11 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
             const fileName = origin.split(/[\\/]/).pop() || '';
             const fileSuffix = fileName.split('.').pop() || '';
 
-            console.log('origin', origin, fileName);
+            console.log('origin', origin, fileName, fileSuffix);
 
             /**
              * @todo 视频解码状态描述
              */
-            // 初始化 FFmpeg（如果需要）
             if (!ffmpegManager.isLoading) {
                 await ffmpegManager.init();
             }
@@ -64,6 +63,7 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
                 type,
                 uri: data,
                 fileName: fileName,
+                fileSuffix,
             });
             if (res) {
                 const { data: transCodeResult, id, outputFile, info } = res;

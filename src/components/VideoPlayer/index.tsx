@@ -144,6 +144,8 @@ export default function CanvasPlayer(props: IProps) {
         }
     }, [isPlaying]);
 
+    useEffect(() => {}, []);
+
     return (
         <div
             className='relative bg-stone-950'

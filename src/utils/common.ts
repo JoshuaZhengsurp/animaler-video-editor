@@ -43,11 +43,11 @@ export const formatDurationTimeToString = (duration = 0, isSecondFloor = false) 
  * 将视频分辨率字符串“256x240”提取，生成宽、高和宽高比；
  */
 export const parseVideoResolution = (resolution: string) => {
-    const match = resolution.match(/^(\d+)x(\d+)$/);
+    const match = resolution.match(/(\d+)x(\d+)/);
     if (!match) return null;
 
-    const height = parseInt(match[1], 10);
-    const width = parseInt(match[2], 10);
+    const height = parseInt(match[2], 10);
+    const width = parseInt(match[1], 10);
     const ratio = width / height;
 
     return { width, height, ratio };
@@ -154,4 +154,18 @@ export const fixPlayerFrameTime = (time: number, frameInterval: number) => {
         fixedTimestamp,
         hasFix: cmpFloat(fixedTimestamp, time),
     };
+};
+
+/**
+ * @description blob转base64编码
+ */
+export const blobToBase64 = (blob: Blob) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            resolve(reader.result); // 这是一个 base64 字符串（data:image/...;base64,...）
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
 };

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { ffmpegManager } from '@/utils/ffmpeg/manager';
-import { formatDurationTime, parseVideoResolution } from '@/utils/common';
+import { blobToBase64, formatDurationTime, parseVideoResolution } from '@/utils/common';
+import { getVideoFrameIndexByTimestamp, getVideoStreamInfo } from '@/utils/ffmpeg/utils';
+import { TRACK_ITEM_HEIGHT } from '@/utils/const';
 
 type PathType = string;
 
@@ -21,8 +23,8 @@ export interface VideoItem {
     suffix?: string;
     info: Record<string, any>;
     resolution: {
-        width: number | string;
-        height: number | string;
+        width: number;
+        height: number;
         ratio: number;
     };
     pFrameMap: Record<string | number, PathType>;
@@ -43,6 +45,7 @@ interface VideoStore {
     removeVideo: (id: string) => void;
     getVideoDuration: (id: string) => number | string;
     getVideoDurationWithVideoItem: (videoItem?: VideoItem) => number | string;
+    getVideoTrackFrame: (id: string, trackWidth: number) => any;
     // setCurrentVideo: (id: string | null) => void;
     // updateVideoStatus: (id: string, status: VideoItem['status'], error?: string) => void;
 }
@@ -74,13 +77,13 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
                 fileSuffix,
             });
             if (res) {
-                const { data: transCodeResult, id, outputFile, info } = res;
+                const { data: transCodeResult, id, outputFile, info, inputFile } = res;
 
                 console.log(
                     'addVideo',
                     id,
                     outputFile,
-                    parseVideoResolution(info?.input?.videoInfo?.[1]),
+                    parseVideoResolution(getVideoStreamInfo(info, 'Video')?.[1]),
                 );
 
                 set((state) => ({
@@ -89,11 +92,14 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
                             id,
                             name: fileName,
                             data: transCodeResult,
-                            path: origin,
+                            origin,
+                            path: inputFile,
                             suffix: fileSuffix,
                             info,
                             duration: formatDurationTime(info?.input?.Duration),
-                            resolution: parseVideoResolution(info?.input?.videoInfo?.[1]),
+                            resolution: parseVideoResolution(
+                                getVideoStreamInfo(info, 'Video')?.[1],
+                            ),
                             status: VideoLoadStatus.DONE,
                         },
                         ...state.videos,
@@ -116,7 +122,7 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
     },
 
     getVideoDuration: (id: string) => {
-        const videoItem = get().videos.filter((viodeItem) => viodeItem.id === id)?.[0];
+        const videoItem = get().videos.filter((videoItem) => videoItem.id === id)?.[0];
         return get().getVideoDurationWithVideoItem(videoItem);
     },
 
@@ -131,6 +137,44 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
     getPFrameMap: (id: string) => {
         const video = get().videos.find((video) => video.id === id);
         return video?.pFrameMap;
+    },
+
+    getVideoTrackFrame: async (id: string, trackWidth: number) => {
+        const video = get().videos.find((video) => video.id === id);
+        const { width = 0, height = 0 } = video?.resolution!;
+        if (video && width && height) {
+            const frameNum = Math.ceil(trackWidth / ((TRACK_ITEM_HEIGHT / height) * width));
+            const fps = 30; // @todo
+            const framesList: any[] = [];
+            /**
+             * 最大时间间隔，1s
+             */
+            const frameInterval = Math.min(1, (video?.duration || 0) / (frameNum + 1) / 1000);
+            let curFrameTimestamp = 0;
+            for (let i = 0; i < frameNum; ++i) {
+                const { startPFrameTimestamp, frameIndex } = getVideoFrameIndexByTimestamp(
+                    curFrameTimestamp,
+                    fps,
+                );
+                const frame = await ffmpegManager
+                    .extractFrame({
+                        inputFile: video.path,
+                        time: startPFrameTimestamp,
+                        w: width,
+                        h: height,
+                        fps,
+                        frameIndex,
+                    })
+                    .then(async (res) => {
+                        return await blobToBase64(res.firstFrame);
+                    });
+                framesList.push({ image: frame, time: curFrameTimestamp });
+                curFrameTimestamp += frameInterval;
+            }
+            // console.log('framesList', framesList);
+            return framesList;
+        }
+        return [];
     },
 
     // updateVideoStatus: (id: string, status: VideoItem['status'], error?: string) => {

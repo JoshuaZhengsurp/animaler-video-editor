@@ -76,7 +76,7 @@ class FFmpegManager {
 
     async checkDirExist(path: string, targetDir: string) {
         const list = await this.ffmpeg.listDir(path);
-        console.log('checkDirExist0', list);
+        // console.log('checkDirExist0', list, path, targetDir);
         // debugger;
         if (list.length > 2) {
             const len = list.length;
@@ -126,8 +126,16 @@ class FFmpegManager {
 
             const fileData = await ffmpeg.readFile(outputFile);
             const data = new Uint8Array(fileData as ArrayBuffer);
-            console.log('result finally', this.metadata);
-            return { data, id: this.currentTranVideoId, outputFile, info: this.metadata };
+            // console.log('result finally', this.metadata);
+            // const list = await this.ffmpeg.listDir(this.resourcePath.resourcePath);
+            // console.log('list', list);
+            return {
+                data,
+                id: this.currentTranVideoId,
+                outputFile,
+                inputFile,
+                info: this.metadata,
+            };
         } catch (error) {
             console.error('transcode failed', error);
         } finally {
@@ -198,13 +206,18 @@ class FFmpegManager {
                 fps,
             );
 
+            console.log('commands', commands);
+
             await this.ffmpeg.exec(commands);
 
-            console.log(`${playFramePrefix}${frameIndex ?? 1}.jpg`);
+            // console.log(`${playFramePrefix}${frameIndex ?? 1}.jpg`);
+            // const list = await this.ffmpeg.listDir(`${this.resourcePath.playFrame}0/`);
+            // console.log('firstFrameData', list);
 
             const firstFrameData = await this.ffmpeg.readFile(
                 `${playFramePrefix}${frameIndex ?? 1}.jpg`,
             );
+
             return {
                 playFramePrefix,
                 firstFrame: new Blob([firstFrameData], { type: 'image/jpeg' }),

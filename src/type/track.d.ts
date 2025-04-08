@@ -2,9 +2,16 @@ type TrackItemType = 'video' | 'audio';
 
 interface Track {
     id: string;
-    type: TrackItemType;
-    frames?: VideoFrame[];
-    audioData?: AudioData;
-    startTime: number;
+    type?: TrackItemType;
     duration: number;
+    startTime: number;
+    resolution: {
+        width: number | string;
+        height: number | string;
+        ratio: number;
+    };
+    path: string;
+    trackWidth: number;
+    // frames?: VideoFrame[];
+    // audioData?: AudioData;
 }

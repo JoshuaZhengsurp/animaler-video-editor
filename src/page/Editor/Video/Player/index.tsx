@@ -32,15 +32,6 @@ export default function VideoPlayer(props: IProps) {
         const ratio = width / height;
         const playerWidth = playerRef.current?.clientWidth || 0;
         const playerHeight = (playerRef.current?.clientHeight || 0) - PADDING_BUTTON_EXTRA;
-        // console.log(
-        //     'getCanvasPlayerWH',
-        //     ratio,
-        //     playerWidth / playerHeight,
-        //     playerRef.current?.clientHeight,
-        //     playerHeight,
-        //     playerWidth,
-        //     calculateFitDimensions([playerWidth, playerHeight], playerWidth / playerHeight, ratio),
-        // );
         if (playerWidth && playerHeight) {
             return calculateFitDimensions(
                 [playerWidth, playerHeight],
@@ -69,7 +60,7 @@ export default function VideoPlayer(props: IProps) {
                     width={canvasPlayerWH[0]}
                     height={canvasPlayerWH[1]}
                     videoResolution={mainVideo?.resolution}
-                    videoFile={`${mainVideo?.id}_${mainVideo?.name}_i.${mainVideo?.suffix}`}
+                    videoFile={mainVideo?.path || ''}
                 />
             )}
         </div>

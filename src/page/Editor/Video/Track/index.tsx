@@ -92,7 +92,7 @@ export default function Track() {
             <div className={style['track-video']}>
                 {/* 时间线, 需要同步位置啥的 */}
                 <TimeLine className='w-full h-8 bg-light-50' duration={mainVideo?.duration || 0} />
-                <TrackContent className='h-full w-full grow' />
+                <TrackContent className='h-full w-full grow' videoList={videoList} />
                 <TimePointer left={pointerPosition} updateTimestamp={handleUpdateTimestamp} />
             </div>
         </div>

@@ -62,6 +62,8 @@ export const getMetaDataWithTranMessage = (
             });
 
             let result: Record<string, any> = {};
+            let videoInfo: Array<any> = [];
+            let videoInfoName: string = VIDEO_INFO;
             let nextPropName = '';
 
             if (msgInfo.length === 1 && msgInfo[0].length === 1) {
@@ -72,10 +74,11 @@ export const getMetaDataWithTranMessage = (
                 msgInfo.forEach((items) => {
                     const iLen = items.length;
                     if (iLen === 1) {
-                        result?.[VIDEO_INFO]
-                            ? result[VIDEO_INFO].push(items[0])
-                            : (result[VIDEO_INFO] = [items[0]]);
+                        videoInfo.push(items[0]);
                     } else {
+                        if (items[0].includes('Stream')) {
+                            videoInfoName = items[0];
+                        }
                         if (iLen === 2) {
                             result[items[0]] = items[1];
                         } else {
@@ -83,11 +86,19 @@ export const getMetaDataWithTranMessage = (
                         }
                     }
                 });
+                if (videoInfo.length) {
+                    if (videoInfoName === VIDEO_INFO) {
+                        result[VIDEO_INFO] = videoInfo;
+                    } else {
+                        result[videoInfoName][VIDEO_INFO] = videoInfo;
+                    }
+                }
             }
 
             // console.log('result', curSpacesNumber, spaces, nextPropName, result, metadata);
 
             if (curSpacesNumber < spaces) {
+                // console.log(JSON.stringify(metadata.data), JSON.stringify(result));
                 metadata.data = Object.assign(metadata.data, result);
                 return {
                     transLogProcessState: TransLogProcessState.NEXT,
@@ -146,3 +157,22 @@ export const getMetaDataWithTranMessage = (
     }
 };
 /************************** 解码时获取视频metadata ***************************/
+
+/**
+ * 获取视频流日志数据
+ */
+export const getVideoStreamInfo = (info: Record<string, any>, type: string = 'Video') => {
+    const { input, output } = info;
+    const findStreamInfoByLog = (logs: Record<string, any>) => {
+        for (const key in logs) {
+            if (key.includes('Stream')) {
+                const streamLog = logs[key];
+                if (streamLog?.[0] === type) {
+                    return streamLog?.[VIDEO_INFO];
+                }
+            }
+        }
+        return null;
+    };
+    return findStreamInfoByLog(input) || findStreamInfoByLog(output);
+};

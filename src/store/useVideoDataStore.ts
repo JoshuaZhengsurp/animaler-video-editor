@@ -48,7 +48,7 @@ interface VideoStore {
 
     getVideoDuration: (id: string) => number | string;
     getVideoDurationWithVideoItem: (videoItem?: VideoItem) => number | string;
-    getVideoTrackFrame: (id: string, trackWidth: number) => any;
+    getVideoTrackFrame: (id: string, trackWidth: number, startTime: number) => any;
     // setCurrentVideo: (id: string | null) => void;
     // updateVideoStatus: (id: string, status: VideoItem['status'], error?: string) => void;
 }
@@ -156,7 +156,8 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
         return video?.pFrameMap;
     },
 
-    getVideoTrackFrame: async (id: string, trackWidth: number) => {
+    // 这个函数是否放在这里需要商榷；
+    getVideoTrackFrame: async (id: string, trackWidth: number, startTime: number) => {
         const video = get().videos.find((video) => video.id === id);
         const { width = 0, height = 0 } = video?.resolution!;
         if (video && width && height) {
@@ -166,8 +167,8 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
             /**
              * 最大时间间隔，1s
              */
+            let curFrameTimestamp = startTime / 1000;
             const frameInterval = Math.min(1, (video?.duration || 0) / (frameNum + 1) / 1000);
-            let curFrameTimestamp = 0;
             for (let i = 0; i < frameNum; ++i) {
                 const { startPFrameTimestamp, frameIndex } = getVideoFrameIndexByTimestamp(
                     curFrameTimestamp,

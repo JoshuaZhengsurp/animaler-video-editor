@@ -14,7 +14,7 @@ interface TrackItemProps {
     scale?: number;
 }
 
-const renderVideoTrack = (frames: VideoFrame[]) => {
+const VideoTrackFrames = (frames: VideoFrame[]) => {
     if (!frames) return null;
     return (
         <div className={style['frames-container']}>
@@ -31,6 +31,16 @@ const renderVideoTrack = (frames: VideoFrame[]) => {
         </div>
     );
 };
+const PureLoadingTrack = (width: number) => {
+    return (
+        <div
+            className={style['track-item']}
+            style={{
+                width: `${width}px`,
+            }}
+        />
+    );
+};
 
 export default function VideoTrack({ track, scale = 1 }: TrackItemProps) {
     const [trackFrames, setTrackFrames] = useState<VideoFrame[]>([]);
@@ -44,7 +54,11 @@ export default function VideoTrack({ track, scale = 1 }: TrackItemProps) {
     // 通过视频信息和容器宽高以及帧率，得出需要绘制多少张帧图
     // 使用ffmpeg将提取帧合并，并将合并的帧输出为base64 从而获取音轨图
     const getTrackFrame = async () => {
-        const ret = await getVideoTrackFrame(track.resourceId, track.trackWidth || 0);
+        const ret = await getVideoTrackFrame(
+            track.resourceId,
+            track.trackWidth || 0,
+            track.startTime,
+        );
         setTrackFrames(ret);
     };
 
@@ -68,14 +82,14 @@ export default function VideoTrack({ track, scale = 1 }: TrackItemProps) {
             }}
             onClick={handleTrackClick}
         >
-            {track.duration && trackFrames.length && (
+            {track.duration && trackFrames.length ? (
                 <div
                     className={style['track-item']}
                     style={{
                         width: `${track.trackWidth}px`,
                     }}
                 >
-                    {renderVideoTrack(trackFrames)}
+                    {VideoTrackFrames(trackFrames)}
                     {isSelected && (
                         <>
                             <div className={style['pre-block']} />
@@ -85,6 +99,8 @@ export default function VideoTrack({ track, scale = 1 }: TrackItemProps) {
                     )}
                     {/* {track.type === 'video' ? renderVideoTrack() : renderAudioTrack()} */}
                 </div>
+            ) : (
+                PureLoadingTrack(track.trackWidth || 0)
             )}
         </div>
     );

@@ -1,3 +1,5 @@
+import { nanoid } from 'nanoid';
+
 export const formatDurationTime = (duration: string) => {
     if (duration) {
         const reg = /(\d+):(\d{2}):(\d+(?:\.\d+)?)/;
@@ -120,11 +122,19 @@ export const calculateCenterPosition = (
     return [x, y];
 };
 
-/**
- * @description 获取文件拓展名
- */
+// 获取文件名
+export const getFileName = (name: string) => {
+    return name.split(/[\\/]/).pop() || '';
+};
+
+// 获取文件拓展名
 export const getFileNameSuffix = (name: string) => {
     return name.split('.').pop() || '';
+};
+
+// 获取文件名(排除扩展名)
+export const getFileNameWithoutSuffix = (name: string) => {
+    return getFileName(name).split('.')[0] || '';
 };
 
 /**
@@ -168,4 +178,9 @@ export const blobToBase64 = (blob: Blob) => {
         reader.onerror = reject;
         reader.readAsDataURL(blob);
     });
+};
+
+// 生成用于唯一标识的nanoid
+export const getNanoid = (size: number = 6) => {
+    return nanoid(size);
 };

@@ -22,12 +22,13 @@ export interface VideoItem {
     thumbnail?: string;
     suffix?: string;
     info: Record<string, any>;
+    origin: string;
     resolution: {
         width: number;
         height: number;
         ratio: number;
-    };
-    pFrameMap: Record<string | number, PathType>;
+    } | null;
+    pFrameMap?: Record<string | number, PathType>;
     status: VideoLoadStatus;
     // error?: string;
 }
@@ -41,8 +42,10 @@ interface VideoInfo {
 interface VideoStore {
     videos: VideoItem[];
     // 操作方法
-    addVideo: (videoInfo: VideoInfo) => Promise<void>;
+    addVideo: (videoInfo: VideoInfo) => Promise<VideoItem | null>;
     removeVideo: (id: string) => void;
+    splitVideo: (splitTimestamp: number, selectedVideoId: string) => void;
+
     getVideoDuration: (id: string) => number | string;
     getVideoDurationWithVideoItem: (videoItem?: VideoItem) => number | string;
     getVideoTrackFrame: (id: string, trackWidth: number) => any;
@@ -61,7 +64,7 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
             const fileName = origin.split(/[\\/]/).pop() || '';
             const fileSuffix = fileName.split('.').pop() || '';
 
-            console.log('origin', origin, fileName, fileSuffix);
+            // console.log('origin', origin, fileName, fileSuffix);
 
             /**
              * @todo 视频解码状态描述
@@ -86,28 +89,28 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
                     parseVideoResolution(getVideoStreamInfo(info, 'Video')?.[1]),
                 );
 
-                set((state) => ({
-                    videos: [
-                        {
-                            id,
-                            name: fileName,
-                            data: transCodeResult,
-                            origin,
-                            path: inputFile,
-                            suffix: fileSuffix,
-                            info,
-                            duration: formatDurationTime(info?.input?.Duration),
-                            resolution: parseVideoResolution(
-                                getVideoStreamInfo(info, 'Video')?.[1],
-                            ),
-                            status: VideoLoadStatus.DONE,
-                        },
-                        ...state.videos,
-                    ] as VideoItem[],
-                }));
+                const videoItem: VideoItem = {
+                    id,
+                    name: fileName,
+                    data: transCodeResult,
+                    origin,
+                    path: inputFile,
+                    suffix: fileSuffix,
+                    info,
+                    duration: formatDurationTime(info?.input?.Duration),
+                    resolution: parseVideoResolution(getVideoStreamInfo(info, 'Video')?.[1]),
+                    status: VideoLoadStatus.DONE,
+                };
+                const videos = [videoItem, ...get().videos] as VideoItem[];
+
+                set(() => ({ videos }));
+
+                return videoItem;
             }
+            return null;
         } catch (error) {
             console.error('Failed to add video:', error);
+            return null;
         }
     },
 
@@ -115,6 +118,20 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
         set((state) => ({
             videos: state.videos.filter((video) => video.id !== id),
         }));
+    },
+
+    splitVideo: async (splitTimestamp: number, selectedVideoId: string) => {
+        const selectedVideo = get().videos.find((video) => video.id === selectedVideoId);
+        const startTime = 0; // 需要完善
+        const duration = selectedVideo?.duration || 0;
+        if (selectedVideo && startTime < splitTimestamp && splitTimestamp < startTime + duration) {
+            await ffmpegManager.splitVideo({
+                fileName: selectedVideo.name,
+                inputFile: selectedVideo?.path || '',
+                start: startTime,
+                end: splitTimestamp,
+            });
+        }
     },
 
     getVideoDurationWithVideoItem: (videoItem?: VideoItem) => {

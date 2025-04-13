@@ -56,3 +56,10 @@ interface PFrameMap {
     [K: number]: PathType;
     '#FRAME#'?: number[];
 }
+
+interface SplitVideoOptions {
+    fileName: string;
+    inputFile: string;
+    start: number;
+    end: number;
+}

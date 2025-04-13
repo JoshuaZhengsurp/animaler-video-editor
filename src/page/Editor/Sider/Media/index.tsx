@@ -5,34 +5,46 @@ import { useStateStore } from '@/store/useStateStore';
 import { useVideoStore } from '@/store/useVideoDataStore';
 import { IS_SHOW_TRANCODE_STATUS } from '@/utils/const';
 import MiniVideo from '@/components/VideoPlayer/MiniVideoPlayer';
+import useVideoTrackStore from '@/store/useVideoTrackStore';
+import { getNanoid } from '@/utils/common';
 
 export default function Media() {
     const messageRef = useRef<HTMLParagraphElement | null>(null);
 
     const { isLoading } = useStateStore();
     const { videos, addVideo } = useVideoStore();
+    const addTrackItem = useVideoTrackStore((s) => s.addTrackItem);
 
     const fileInfoRef = useRef<Record<string, any> | null>(null);
 
     const importMediaFile = async () => {
         /**
-         * 打开文件系统，
-         * 1. 获取文件路径
-         * 2. 将文件转blob二级制
-         * 3. 将blob二级制传递给transcode函数
+         * 打开文件系统，获取文件路径
+         * 将文件转blob二级制，将blob二级制传递给transcode函数
          */
-        console.log('hell0');
         fileInfoRef.current = (await window.ipcRenderer.invoke('dialog:openFile')) as Record<
             string,
             any
         >;
-        // console.log(fileInfoRef);
         if (fileInfoRef.current?.data) {
-            await addVideo({
+            const videoItem = await addVideo({
                 data: fileInfoRef.current?.data,
                 type: 'LOCAL',
                 origin: fileInfoRef.current?.path,
             });
+            if (videoItem) {
+                const trackItem: TrackItem = {
+                    id: getNanoid(9),
+                    type: 'video',
+                    duration: videoItem?.duration || 0,
+                    startTime: 0,
+                    path: videoItem.path,
+                    resourceId: videoItem.id,
+                    trackIndex: 0,
+                    startLeft: 0,
+                };
+                addTrackItem(trackItem);
+            }
         }
     };
 

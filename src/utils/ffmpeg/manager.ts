@@ -8,7 +8,8 @@ import {
 } from '../const';
 import { getMetaDataWithTranMessage, TransLogProcessState } from './utils';
 import { nanoid } from 'nanoid';
-import { genPlayFrame, transcodeFromAvi2Mp4 } from './command';
+import { genPlayFrame, splitVideo, transcodeFromAvi2Mp4 } from './command';
+import { getFileNameSuffix, getFileNameWithoutSuffix } from '../common';
 
 /**
  * @description
@@ -232,12 +233,26 @@ class FFmpegManager {
      * @todo 建立预缓存机制，有效利用内存空间的同时减缓缓冲时间
      */
     async getPlayFrame({ inputFile, time, frameIndex }: GetPlayFrameOptions) {
-        /**
-         * @todo 如果存在这个切片走缓存
-         */
+        // @todo 如果存在这个切片走缓存
         const framePath = `${this.resourcePath.playFrame}${time}/pic-${time}-${frameIndex}.jpg`;
         console.log('getPlayFrame', framePath);
         return new Blob([await this.ffmpeg.readFile(framePath)], { type: 'image/jpeg' });
+    }
+
+    async splitVideo({ inputFile, start, end }: SplitVideoOptions) {
+        const outputVideoId = nanoid(9);
+        const fileName = getFileNameWithoutSuffix(inputFile);
+        const suffix = getFileNameSuffix(inputFile);
+        const outputFile = `${this.resourcePath.resourcePath}${outputVideoId}_${fileName || ''}.${suffix}`;
+
+        const { commands } = splitVideo(inputFile, outputFile, start, end);
+
+        const res = await this.ffmpeg.exec(commands);
+
+        const list = await this.ffmpeg.listDir(`${this.resourcePath.resourcePath}`);
+        console.log('splitVideo', list);
+
+        console.log(res);
     }
 
     private showLog() {

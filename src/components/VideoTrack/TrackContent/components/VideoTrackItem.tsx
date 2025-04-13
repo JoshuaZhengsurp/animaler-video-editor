@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import style from './index.module.scss';
 import { useVideoStore } from '@/store/useVideoDataStore';
+import useVideoTrackStore from '@/store/useVideoTrackStore';
 
 interface VideoInfo {
     duration: number;
@@ -9,8 +10,7 @@ interface VideoInfo {
 }
 
 interface TrackItemProps {
-    track: Track;
-    isSelected: boolean;
+    track: TrackItem;
     scale?: number;
 }
 
@@ -18,9 +18,7 @@ const renderVideoTrack = (frames: VideoFrame[]) => {
     if (!frames) return null;
     return (
         <div className={style['frames-container']}>
-            {/**
-             * @todo 使用canvas来实现音轨图的绘制
-             */}
+            {/* @todo 使用canvas来实现音轨图的绘制 */}
             {frames.map((frame, index) => (
                 <div key={`${frame.time}-${index}`} className={style['frame-item']}>
                     <img
@@ -34,13 +32,26 @@ const renderVideoTrack = (frames: VideoFrame[]) => {
     );
 };
 
-export default function VideoTrack({ track, scale = 1, isSelected = false }: TrackItemProps) {
+export default function VideoTrack({ track, scale = 1 }: TrackItemProps) {
     const [trackFrames, setTrackFrames] = useState<VideoFrame[]>([]);
     const getVideoTrackFrame = useVideoStore((s) => s.getVideoTrackFrame);
 
+    const selectTrackId = useVideoTrackStore((s) => s.selectedTrackId);
+    const setSelectedTrackId = useVideoTrackStore((s) => s.setSelectedTrackId);
+
+    const isSelected = selectTrackId === track.id;
+
+    // 通过视频信息和容器宽高以及帧率，得出需要绘制多少张帧图
+    // 使用ffmpeg将提取帧合并，并将合并的帧输出为base64 从而获取音轨图
     const getTrackFrame = async () => {
-        const ret = await getVideoTrackFrame(track.id, track.trackWidth);
+        const ret = await getVideoTrackFrame(track.resourceId, track.trackWidth || 0);
         setTrackFrames(ret);
+    };
+
+    const handleTrackClick = () => {
+        if (!isSelected) {
+            setSelectedTrackId(track.id);
+        }
     };
 
     useEffect(() => {
@@ -50,16 +61,18 @@ export default function VideoTrack({ track, scale = 1, isSelected = false }: Tra
 
     return (
         <div
-            key={track.id}
             className={style['track-wrapper']}
-            style={{ width: track.trackWidth ? `${track.trackWidth}px` : 0 }}
+            style={{
+                width: track.trackWidth ? `${track.trackWidth}px` : 0,
+                left: `${track.startLeft}px`,
+            }}
+            onClick={handleTrackClick}
         >
             {track.duration && trackFrames.length && (
                 <div
                     className={style['track-item']}
                     style={{
-                        left: `${(track.startTime / track.duration) * 100}%`,
-                        width: `${(track.duration / track.duration) * 100}%`,
+                        width: `${track.trackWidth}px`,
                     }}
                 >
                     {renderVideoTrack(trackFrames)}

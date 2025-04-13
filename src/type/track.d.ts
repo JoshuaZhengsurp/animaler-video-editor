@@ -1,17 +1,14 @@
 type TrackItemType = 'video' | 'audio';
 
-interface Track {
+interface TrackItem {
     id: string;
     type?: TrackItemType;
+    path: string; // track资源路径
+    resourceId: string; // track资源id
     duration: number;
     startTime: number;
-    resolution: {
-        width: number | string;
-        height: number | string;
-        ratio: number;
-    };
-    path: string;
-    trackWidth: number;
-    // frames?: VideoFrame[];
-    // audioData?: AudioData;
+    startLeft: number;
+    trackIndex: number;
+    trackWidth?: number;
+    frames?: VideoFrame[];
 }

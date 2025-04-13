@@ -12,6 +12,7 @@ interface TranCodeOptions {
     type: string;
     uri: string | Uint8Array<ArrayBufferLike>;
     fileName: string;
+    fileSuffix: string;
     execCmd: Array<string> | string;
     outputFile: string;
     [propName: string]: unknown;
@@ -54,4 +55,11 @@ type PathType = string;
 interface PFrameMap {
     [K: number]: PathType;
     '#FRAME#'?: number[];
+}
+
+interface SplitVideoOptions {
+    fileName: string;
+    inputFile: string;
+    start: number;
+    end: number;
 }

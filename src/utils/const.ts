@@ -13,3 +13,5 @@ export const PATH_CONFIG = {
 };
 
 export const START_FRAME_INDEX_KEY = '#FRAME#';
+
+export const TRACK_ITEM_HEIGHT = 56; //px

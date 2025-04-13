@@ -8,7 +8,8 @@ import {
 } from '../const';
 import { getMetaDataWithTranMessage, TransLogProcessState } from './utils';
 import { nanoid } from 'nanoid';
-import { genPlayFrame, transcodeFromAvi2Mp4 } from './command';
+import { genPlayFrame, splitVideo, transcodeFromAvi2Mp4 } from './command';
+import { getFileNameSuffix, getFileNameWithoutSuffix } from '../common';
 
 /**
  * @description
@@ -76,7 +77,7 @@ class FFmpegManager {
 
     async checkDirExist(path: string, targetDir: string) {
         const list = await this.ffmpeg.listDir(path);
-        console.log('checkDirExist0', list);
+        // console.log('checkDirExist0', list, path, targetDir);
         // debugger;
         if (list.length > 2) {
             const len = list.length;
@@ -89,26 +90,20 @@ class FFmpegManager {
         return false;
     }
 
-    /* 读取媒体文件 */
-    async readMediaFile(file: File) {
-        const data = await file.arrayBuffer();
-        const fileName = file.name;
-        await this.ffmpeg.writeFile(fileName, new Uint8Array(data));
-        return fileName;
-    }
-
-    /* 转码，例如mp4 */
+    /**
+     * @description
+     * 初始化导入视频
+     * 暂不开放avi转MP4
+     */
     async transcode(options: Partial<TranCodeOptions>) {
         this.currentTranVideoId = nanoid(9);
-        const { fileName, type: originType } = options;
+        const { fileName, type: originType, fileSuffix } = options;
         const ffmpeg = this.ffmpeg;
 
-        const inputFile = `${this.currentTranVideoId}_${fileName || ''}_i.avi`;
-        const outputFile = `${this.currentTranVideoId}_${fileName || ''}_o.mp4`;
+        const inputFile = `${this.resourcePath.resourcePath}${this.currentTranVideoId}_i_${fileName || ''}`;
+        const outputFile = `${this.resourcePath.resourcePath}${this.currentTranVideoId}_o_${fileName || ''}.mp4`;
 
         const { commands } = transcodeFromAvi2Mp4(inputFile, outputFile);
-
-        // console.log('currentTranVideoId', this.currentTranVideoId, fileName);
 
         try {
             await ffmpeg.deleteFile(inputFile);
@@ -132,8 +127,16 @@ class FFmpegManager {
 
             const fileData = await ffmpeg.readFile(outputFile);
             const data = new Uint8Array(fileData as ArrayBuffer);
-            console.log('result finally', this.metadata);
-            return { data, id: this.currentTranVideoId, outputFile, info: this.metadata };
+            // console.log('result finally', this.metadata);
+            // const list = await this.ffmpeg.listDir(this.resourcePath.resourcePath);
+            // console.log('list', list);
+            return {
+                data,
+                id: this.currentTranVideoId,
+                outputFile,
+                inputFile,
+                info: this.metadata,
+            };
         } catch (error) {
             console.error('transcode failed', error);
         } finally {
@@ -155,10 +158,6 @@ class FFmpegManager {
                 console.warn(`Failed to delete file ${fileName}:`, error);
             }
         }
-    }
-
-    async exec(args: string[], timeout: number) {
-        return timeout ? this.ffmpeg.exec(args, timeout) : this.ffmpeg.exec(args);
     }
 
     /**
@@ -208,13 +207,18 @@ class FFmpegManager {
                 fps,
             );
 
+            console.log('commands', commands);
+
             await this.ffmpeg.exec(commands);
 
-            console.log(`${playFramePrefix}${frameIndex ?? 1}.jpg`);
+            // console.log(`${playFramePrefix}${frameIndex ?? 1}.jpg`);
+            // const list = await this.ffmpeg.listDir(`${this.resourcePath.playFrame}0/`);
+            // console.log('firstFrameData', list);
 
             const firstFrameData = await this.ffmpeg.readFile(
                 `${playFramePrefix}${frameIndex ?? 1}.jpg`,
             );
+
             return {
                 playFramePrefix,
                 firstFrame: new Blob([firstFrameData], { type: 'image/jpeg' }),
@@ -229,12 +233,26 @@ class FFmpegManager {
      * @todo 建立预缓存机制，有效利用内存空间的同时减缓缓冲时间
      */
     async getPlayFrame({ inputFile, time, frameIndex }: GetPlayFrameOptions) {
-        /**
-         * @todo 如果存在这个切片走缓存
-         */
+        // @todo 如果存在这个切片走缓存
         const framePath = `${this.resourcePath.playFrame}${time}/pic-${time}-${frameIndex}.jpg`;
         console.log('getPlayFrame', framePath);
         return new Blob([await this.ffmpeg.readFile(framePath)], { type: 'image/jpeg' });
+    }
+
+    async splitVideo({ inputFile, start, end }: SplitVideoOptions) {
+        const outputVideoId = nanoid(9);
+        const fileName = getFileNameWithoutSuffix(inputFile);
+        const suffix = getFileNameSuffix(inputFile);
+        const outputFile = `${this.resourcePath.resourcePath}${outputVideoId}_${fileName || ''}.${suffix}`;
+
+        const { commands } = splitVideo(inputFile, outputFile, start, end);
+
+        const res = await this.ffmpeg.exec(commands);
+
+        const list = await this.ffmpeg.listDir(`${this.resourcePath.resourcePath}`);
+        console.log('splitVideo', list);
+
+        console.log(res);
     }
 
     private showLog() {
@@ -327,6 +345,10 @@ class FFmpegManager {
             console.error('Failed to get video duration:', error);
             throw error;
         }
+    }
+
+    async exec(args: string[], timeout: number) {
+        return timeout ? this.ffmpeg.exec(args, timeout) : this.ffmpeg.exec(args);
     }
 }
 

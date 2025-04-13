@@ -56,7 +56,7 @@ export default function CanvasPlayer(props: IProps) {
 
     const clearTimer = () => {
         frameIndex.current = 1;
-        clearInterval(frameTimer.current);
+        frameTimer.current && clearInterval(frameTimer.current);
         frameTimer.current = undefined;
     };
 
@@ -75,9 +75,22 @@ export default function CanvasPlayer(props: IProps) {
         };
     };
 
-    const genFirstPlayFrame = async (time: number) => {
-        if (!canvasRef.current || !videoFile) return null;
+    const renderDefaultFrame = async () => {
+        const ctx = canvasRef.current?.getContext('2d');
+        if (ctx) {
+            ctx.clearRect(centerX, centerY, frameWidth, frameHeight);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+        }
+    };
 
+    const genFirstPlayFrame = async (time: number) => {
+        // console.log('genFirstPlayFrame', videoFile, canvasRef.current, time, duration);
+        if (!canvasRef.current || !videoFile) return null;
+        if (time * 1000 > duration) {
+            renderDefaultFrame();
+            return null;
+        }
         const { startPFrameTimestamp, frameIndex: FixedFrameIndex } = getVideoFrameIndexByTimestamp(
             time,
             fps,
@@ -117,7 +130,12 @@ export default function CanvasPlayer(props: IProps) {
                 setCurrentTime(curPlayTime.current);
                 curPlayTime.current += frameInterval;
                 renderFrame(frameBlob);
-                // console.log(duration, curPlayTime.current);
+                // console.log(
+                //     playerState,
+                //     curPlayTime.current,
+                //     frameIndex.current,
+                //     frameTimer.current,
+                // );
                 if (
                     playerState !== PlayState.PLAY ||
                     cmpFloat(duration, curPlayTime.current) ||
@@ -134,6 +152,7 @@ export default function CanvasPlayer(props: IProps) {
                 console.log('error', error);
                 curPlayTime.current = 0;
                 stop();
+                clearTimer();
             }
         }, frameInterval);
     };
@@ -170,6 +189,8 @@ export default function CanvasPlayer(props: IProps) {
             }
         }
     }, [playerState]);
+
+    useEffect(() => {}, []);
 
     return (
         <div

@@ -18,12 +18,17 @@ import { debounce } from 'lodash';
 export default function Track() {
     const videoTrackStore = useVideoTrackStore();
     const currentTime = useVideoTrackStore((s) => s.currentTime);
+    const tracks = useVideoTrackStore((s) => s.tracks);
+    const selectTrackId = useVideoTrackStore((s) => s.selectedTrackId);
+    const splitTrackItem = useVideoTrackStore((s) => s.splitTrackItem);
+
     const videoList = useVideoStore((s) => s.videos);
+    const splitVideo = useVideoStore((s) => s.splitVideo);
     const setPlayerState = useVideoPlayerStore((s) => s.setPlayState);
 
     const [pointerPosition, setPointerPosition] = useState(0);
 
-    const mainVideo = useMemo(() => videoList[0] || null, [videoList]);
+    // const mainVideo = useMemo(() => videoList[0] || null, [videoList]);
 
     const isDragTimePointerEffect = useRef(false);
 
@@ -51,13 +56,15 @@ export default function Track() {
         }
     };
 
+    // 视频音轨分离
+    const handleVideoSplit = async () => {
+        if (selectTrackId) {
+            splitTrackItem(selectTrackId);
+        }
+    };
+
     // 使用isDragTimePointerEffect目的是
     useEffect(() => {
-        // console.log(
-        //     'videoTrackStore.currentTime',
-        //     videoTrackStore.currentTime,
-        //     isDragTimePointerEffect.current,
-        // );
         if (!isDragTimePointerEffect.current) {
             handleUpdatePosition(videoTrackStore.currentTime);
         } else {
@@ -65,22 +72,14 @@ export default function Track() {
         }
     }, [currentTime]);
 
-    useEffect(() => {
-        let duration = 0;
-        for (const item of videoList) {
-            duration = Math.max(item.duration || 0, duration);
-        }
-        if (videoTrackStore.duration < duration) {
-            videoTrackStore.setDuration(duration);
-            // console.log('useEffect duration', duration);
-        }
-    }, [videoList]);
-
     return (
         <div className={style['track']}>
             <div className={style['track-banner']}>
                 {/* todo: 更多操作 */}
                 {/* todo: duration  */}
+                <div className={style['track-banner-left']} onClick={handleVideoSplit}>
+                    剪切
+                </div>
                 <Duration
                     className='h-8 flex items-center text-xs'
                     curDurationClassName='inline-block mr-1'
@@ -90,9 +89,11 @@ export default function Track() {
                 />
             </div>
             <div className={style['track-video']}>
-                {/* 时间线, 需要同步位置啥的 */}
-                <TimeLine className='w-full h-8 bg-light-50' duration={mainVideo?.duration || 0} />
-                <TrackContent className='h-full w-full grow' />
+                <TimeLine
+                    className='w-full h-8 bg-light-50'
+                    duration={videoTrackStore.duration || 0}
+                />
+                <TrackContent className='h-full w-full grow' tracks={tracks} />
                 <TimePointer left={pointerPosition} updateTimestamp={handleUpdateTimestamp} />
             </div>
         </div>

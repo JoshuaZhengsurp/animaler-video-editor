@@ -193,3 +193,20 @@ export function transcodeFromAvi2Mp4(inputPath: string, outputPath: string) {
         ],
     };
 }
+
+// 分离视频
+export function splitVideo(videoPath: string, outputPath: string, start: number, end: number) {
+    return {
+        commands: [
+            '-i',
+            videoPath,
+            '-ss',
+            `${start}`,
+            '-to',
+            `${end}`,
+            '-c',
+            'copy',
+            `${outputPath}`,
+        ],
+    };
+}

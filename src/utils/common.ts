@@ -1,3 +1,5 @@
+import { nanoid } from 'nanoid';
+
 export const formatDurationTime = (duration: string) => {
     if (duration) {
         const reg = /(\d+):(\d{2}):(\d+(?:\.\d+)?)/;
@@ -43,11 +45,11 @@ export const formatDurationTimeToString = (duration = 0, isSecondFloor = false) 
  * 将视频分辨率字符串“256x240”提取，生成宽、高和宽高比；
  */
 export const parseVideoResolution = (resolution: string) => {
-    const match = resolution.match(/^(\d+)x(\d+)$/);
+    const match = resolution.match(/(\d+)x(\d+)/);
     if (!match) return null;
 
-    const height = parseInt(match[1], 10);
-    const width = parseInt(match[2], 10);
+    const height = parseInt(match[2], 10);
+    const width = parseInt(match[1], 10);
     const ratio = width / height;
 
     return { width, height, ratio };
@@ -119,10 +121,21 @@ export const calculateCenterPosition = (
 
     return [x, y];
 };
-// export const splitFileNameAndSuffix = (name: string) => {
-//     const fileName = origin.split(/[\\/]/).pop() || '';
-//     const fileSuffix = fileName.split('.').pop() || '';
-// }
+
+// 获取文件名
+export const getFileName = (name: string) => {
+    return name.split(/[\\/]/).pop() || '';
+};
+
+// 获取文件拓展名
+export const getFileNameSuffix = (name: string) => {
+    return name.split('.').pop() || '';
+};
+
+// 获取文件名(排除扩展名)
+export const getFileNameWithoutSuffix = (name: string) => {
+    return getFileName(name).split('.')[0] || '';
+};
 
 /**
  * @description 比较浮点数；差值1e-4认为等于
@@ -151,4 +164,23 @@ export const fixPlayerFrameTime = (time: number, frameInterval: number) => {
         fixedTimestamp,
         hasFix: cmpFloat(fixedTimestamp, time),
     };
+};
+
+/**
+ * @description blob转base64编码
+ */
+export const blobToBase64 = (blob: Blob) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            resolve(reader.result); // 这是一个 base64 字符串（data:image/...;base64,...）
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+};
+
+// 生成用于唯一标识的nanoid
+export const getNanoid = (size: number = 6) => {
+    return nanoid(size);
 };

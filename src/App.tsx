@@ -12,7 +12,6 @@ function App() {
     const init = async () => {
         await ffmpegManager.init();
         setIsLoading(false);
-        console.log('inited ffmpeg');
     };
 
     useEffect(() => {

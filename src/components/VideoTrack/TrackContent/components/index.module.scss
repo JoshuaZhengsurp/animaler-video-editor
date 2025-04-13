@@ -6,13 +6,17 @@
     height: 3.5rem;
     background: rgba(0, 0, 0, 0.1);
     overflow: hidden;
-
     z-index: 11;
-
     border-radius: 0.6rem;
     position: absolute;
-}
+    -webkit-user-select: none;
+    user-select: none;
+    transition: transform 0.1s ease;
 
+    &:active {
+        transform: scale(1.02);
+    }
+}
 
 .track-item {
     position: relative;

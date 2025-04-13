@@ -1,17 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import style from './index.module.scss';
 import { useVideoStore } from '@/store/useVideoDataStore';
 import useVideoTrackStore from '@/store/useVideoTrackStore';
-
-interface VideoInfo {
-    duration: number;
-    width: number;
-    height: number;
-}
+import { useTrackDragger } from '@/hooks/useTrackDragger';
 
 interface TrackItemProps {
     track: TrackItem;
     scale?: number;
+
+    handleDragStart: (clientX: number, track: TrackItem, trackItemRef?: HTMLElement | null) => void;
 }
 
 const VideoTrackFrames = (frames: VideoFrame[]) => {
@@ -42,12 +39,14 @@ const PureLoadingTrack = (width: number) => {
     );
 };
 
-export default function VideoTrack({ track, scale = 1 }: TrackItemProps) {
+export default function VideoTrackItem({ track, scale = 1, handleDragStart }: TrackItemProps) {
     const [trackFrames, setTrackFrames] = useState<VideoFrame[]>([]);
-    const getVideoTrackFrame = useVideoStore((s) => s.getVideoTrackFrame);
 
+    const getVideoTrackFrame = useVideoStore((s) => s.getVideoTrackFrame);
     const selectTrackId = useVideoTrackStore((s) => s.selectedTrackId);
     const setSelectedTrackId = useVideoTrackStore((s) => s.setSelectedTrackId);
+
+    const trackItemRef = useRef<HTMLDivElement>(null);
 
     const isSelected = selectTrackId === track.id;
 
@@ -75,12 +74,19 @@ export default function VideoTrack({ track, scale = 1 }: TrackItemProps) {
 
     return (
         <div
+            ref={trackItemRef}
             className={style['track-wrapper']}
             style={{
                 width: track.trackWidth ? `${track.trackWidth}px` : 0,
                 left: `${track.startLeft}px`,
+                cursor: isSelected ? 'move' : 'default',
             }}
             onClick={handleTrackClick}
+            onMouseDown={(e) => {
+                isSelected &&
+                    handleDragStart &&
+                    handleDragStart(e.clientX, track, trackItemRef.current);
+            }}
         >
             {track.duration && trackFrames.length ? (
                 <div

@@ -1,20 +1,46 @@
-import React, { useMemo } from 'react';
+import React, { Fragment, useMemo, useRef } from 'react';
 import TrackItem from './components/VideoTrackItem';
 import styles from './index.module.scss';
 import useVideoTrackStore from '@/store/useVideoTrackStore';
 import { VideoItem } from '@/store/useVideoDataStore';
-
-// interface VideoInfo {
-//     duration: number; // 视频总时长（秒）
-//     width: number; // 视频宽度
-//     height: number; // 视频高度
-// }
+import { useTrackDragger } from '@/hooks/useTrackDragger';
 
 interface VideoTrackProps {
     tracks: TrackItem[];
     scale?: number;
     className: string;
 }
+
+interface TrackListProps {
+    width: number;
+    trackList: TrackItem[];
+    scale: number;
+}
+
+/**
+ * @todo 视频编辑器的一条音轨中，支持音轨内的拖拽移动
+ */
+const TrackList = ({ width, trackList, scale }: TrackListProps) => {
+    const trackListRef = useRef<HTMLDivElement>(null);
+    const { handleDragStart } = useTrackDragger(trackList, trackListRef);
+
+    return (
+        <div
+            ref={trackListRef}
+            className={styles['track-list']}
+            style={{ minWidth: '100%', width: `${width}px` }}
+        >
+            {trackList.map((track) => (
+                <TrackItem
+                    track={track}
+                    scale={scale}
+                    key={track.id}
+                    handleDragStart={handleDragStart}
+                />
+            ))}
+        </div>
+    );
+};
 
 export default function VideoTrack(props: VideoTrackProps) {
     const { scale = 1, className, tracks } = props;
@@ -40,15 +66,12 @@ export default function VideoTrack(props: VideoTrackProps) {
             {Object.keys(trackContentMap).map((key) => {
                 const trackItemList = trackContentMap[key];
                 return (
-                    <div
+                    <TrackList
                         key={key}
-                        className={styles['track-list']}
-                        style={{ width: `${trackItemList.width}px` }}
-                    >
-                        {trackItemList.trackList.map((track) => (
-                            <TrackItem track={track} scale={scale} key={track.id} />
-                        ))}
-                    </div>
+                        width={trackItemList.width}
+                        trackList={trackItemList.trackList}
+                        scale={scale}
+                    />
                 );
             })}
         </div>

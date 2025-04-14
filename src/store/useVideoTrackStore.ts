@@ -24,16 +24,16 @@ interface VideoTrackState {
     // getter
     getCurrentTime: () => number;
     getCurrentPositionByTime: (t: number) => number; // 计算当前时间对应的像素位置
-    getCurrentPositionByPosition: (p: number) => number; // 计算当前像素对应的时间戳
+    getCurrentTimeByPosition: (p: number) => number; // 计算当前像素对应的时间戳
     getTrackItem: (id: string) => TrackItem | null;
 
     addTrackItem: (trackItem: TrackItem, toTrackIndex?: number) => void;
-    updateDuration: (endTimestamp: number) => void;
+    updateDuration: (tracks: TrackItem[]) => void;
     splitTrackItem: (selectedTrackId: string) => void;
 }
 
 const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
-    duration: 0,
+    duration: 0, // 音轨编辑的总时长
     currentTime: 0,
     trackWidth: 0,
     timeLineCeilWidth: 0,
@@ -59,9 +59,10 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
         }
         return (currentTime / timeIntervalCeil) * timeLineCeilWidth;
     },
-    getCurrentPositionByPosition: (position: number) => {
+    getCurrentTimeByPosition: (position: number) => {
         const { timeIntervalCeil, timeLineCeilWidth, trackWidth } = get();
-        if (position < 0 || position > trackWidth) {
+        // 对这段表示怀疑position > trackWidth
+        if (position < 0 /* || position > trackWidth */) {
             return -1;
         }
         const currentTime = (position / timeLineCeilWidth) * timeIntervalCeil;
@@ -88,23 +89,27 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
         if (idx === -1) {
             set((s) => {
                 console.log('set tracks', s.tracks, idx, trackItem);
-                return { tracks: [...s.tracks, trackItem], selectedTrackId: trackItem.id };
+                const newTracks = [...s.tracks, trackItem];
+                updateDuration(newTracks);
+                return { tracks: newTracks, selectedTrackId: trackItem.id };
             });
         } else {
             set((s) => {
                 console.log('set tracks', s.tracks, idx, trackItem);
                 s.tracks[idx] = trackItem;
-                return { tracks: [...s.tracks], selectedTrackId: trackItem.id };
+                const newTracks = [...s.tracks];
+                updateDuration(newTracks);
+                return { tracks: newTracks, selectedTrackId: trackItem.id };
             });
         }
-        updateDuration(trackItem.duration + trackItem.startTime);
     },
 
-    updateDuration: (endTimestamp: number) => {
-        const duration = get().duration;
-        if (duration < endTimestamp) {
-            set({ duration: endTimestamp });
+    updateDuration: (tracks: TrackItem[]) => {
+        let duration = 0;
+        for (let i = 0; i < tracks.length; ++i) {
+            duration = Math.max(duration, tracks[i].duration + tracks[i].startTime);
         }
+        set({ duration });
     },
 
     splitTrackItem: (selectTrackId: string) => {
@@ -113,14 +118,16 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
         if (
             selectedTrackItem &&
             selectedTrackItem.startTime < currentTime &&
-            currentTime < selectedTrackItem.duration + selectedTrackItem.duration
+            currentTime < selectedTrackItem.startTime + selectedTrackItem.duration
         ) {
             const trackIndex = selectedTrackItem.trackIndex;
             const leftTrackDuration = currentTime - selectedTrackItem.startTime;
             const rightTrackDuration =
                 selectedTrackItem.startTime + selectedTrackItem.duration - currentTime;
+            const leftTrackPlayEndTime = selectedTrackItem.playStartTime + leftTrackDuration; // 同时也是rightTrack play开始的时间戳
             const leftTrackItem: TrackItem = {
                 ...selectedTrackItem,
+                playEndTime: leftTrackPlayEndTime,
                 duration: leftTrackDuration,
                 trackWidth: getCurrentPositionByTime(leftTrackDuration),
             };
@@ -130,6 +137,8 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
                 duration: rightTrackDuration,
                 trackWidth: getCurrentPositionByTime(rightTrackDuration),
                 startTime: currentTime,
+                playStartTime: leftTrackPlayEndTime,
+                playEndTime: selectedTrackItem.playEndTime,
                 startLeft: leftTrackItem.startLeft + (leftTrackItem.trackWidth || 0),
             };
 

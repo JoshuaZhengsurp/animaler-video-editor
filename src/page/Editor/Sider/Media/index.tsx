@@ -42,6 +42,8 @@ export default function Media() {
                     resourceId: videoItem.id,
                     trackIndex: 0,
                     startLeft: 0,
+                    playStartTime: 0,
+                    playEndTime: videoItem?.duration || 0,
                 };
                 addTrackItem(trackItem);
             }

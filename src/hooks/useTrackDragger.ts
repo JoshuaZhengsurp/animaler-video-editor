@@ -4,12 +4,8 @@ import useVideoTrackStore from '@/store/useVideoTrackStore';
 // 检测是否发生碰撞，如果只碰撞过一次，可提供碰撞修复的startleft；反之。两次以上，则回复原位置
 // 碰撞检测，时间复杂度为O(N), 但考虑到音轨个数，对性能消耗不算太大
 // 有对音轨进行排序，可考虑使用二分来优化算法
-const checkIsColliding = (
-    interval: (number | string)[][],
-    left: number,
-    right: number,
-    id: string,
-):
+
+type CollisionResult =
     | {
           isColliding: true;
           collidingNum: number;
@@ -17,7 +13,14 @@ const checkIsColliding = (
       }
     | {
           isColliding: false;
-      } => {
+      };
+
+const checkIsColliding = (
+    interval: (number | string)[][],
+    left: number,
+    right: number,
+    id: string,
+): CollisionResult => {
     let collidingNum = 0;
     let newStartLeft = -1;
     for (let i = 0; i < interval.length; ++i) {
@@ -48,8 +51,9 @@ const checkIsColliding = (
     return { isColliding: false };
 };
 
-export const useTrackDragger = (trackList: TrackItem[], trackListRef: Ref<HTMLElement>) => {
+export const useTrackDragger = (trackList: TrackItem[]) => {
     const addTrackItem = useVideoTrackStore((s) => s.addTrackItem);
+    const getCurrentTimeByPosition = useVideoTrackStore((s) => s.getCurrentTimeByPosition);
 
     const isDraggingRef = useRef(false);
     const dragStartXRef = useRef(0);
@@ -104,6 +108,7 @@ export const useTrackDragger = (trackList: TrackItem[], trackListRef: Ref<HTMLEl
                 addTrackItem({
                     ...trackItem,
                     startLeft: newStartLeftRef.current,
+                    startTime: getCurrentTimeByPosition(newStartLeftRef.current),
                 });
             } else {
                 const fixedStartLeft = ret.newStartLeft;
@@ -121,6 +126,7 @@ export const useTrackDragger = (trackList: TrackItem[], trackListRef: Ref<HTMLEl
                         addTrackItem({
                             ...trackItem,
                             startLeft: ret.newStartLeft,
+                            startTime: getCurrentTimeByPosition(newStartLeftRef.current),
                         });
                     } else {
                         (selectedTrackItemRef.current as HTMLElement).style.left =

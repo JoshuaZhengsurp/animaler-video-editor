@@ -39,7 +39,7 @@ export default function Track() {
     const handleUpdateTimestamp = (position: number) => {
         if (position >= 0) {
             isDragTimePointerEffect.current = true;
-            const curTimestamp = videoTrackStore.getCurrentPositionByPosition(position);
+            const curTimestamp = videoTrackStore.getCurrentTimeByPosition(position);
             videoTrackStore.setCurrentTime(curTimestamp);
             setPlayerState(PlayState.PAUSE);
             setPointerPosition(() => {

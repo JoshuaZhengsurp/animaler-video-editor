@@ -46,6 +46,7 @@ interface VideoStore {
     removeVideo: (id: string) => void;
     splitVideo: (splitTimestamp: number, selectedVideoId: string) => void;
 
+    getVideoItem: (id: string) => VideoItem | null;
     getVideoDuration: (id: string) => number | string;
     getVideoDurationWithVideoItem: (videoItem?: VideoItem) => number | string;
     getVideoTrackFrame: (id: string, trackWidth: number, startTime: number) => any;
@@ -193,6 +194,10 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
             return framesList;
         }
         return [];
+    },
+
+    getVideoItem: (id: string) => {
+        return get().videos.find((item) => item.id === id) || null;
     },
 
     // updateVideoStatus: (id: string, status: VideoItem['status'], error?: string) => {

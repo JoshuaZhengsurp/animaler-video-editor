@@ -1,5 +1,6 @@
 import { Ref, useMemo, useRef } from 'react';
 import useVideoTrackStore from '@/store/useVideoTrackStore';
+import { PlayState, useVideoPlayerStore } from '@/store/useVideoPlayerStore';
 
 // 检测是否发生碰撞，如果只碰撞过一次，可提供碰撞修复的startleft；反之。两次以上，则回复原位置
 // 碰撞检测，时间复杂度为O(N), 但考虑到音轨个数，对性能消耗不算太大
@@ -54,6 +55,7 @@ const checkIsColliding = (
 export const useTrackDragger = (trackList: TrackItem[]) => {
     const addTrackItem = useVideoTrackStore((s) => s.addTrackItem);
     const getCurrentTimeByPosition = useVideoTrackStore((s) => s.getCurrentTimeByPosition);
+    const setPlayState = useVideoPlayerStore((s) => s.setPlayState);
 
     const isDraggingRef = useRef(false);
     const dragStartXRef = useRef(0);
@@ -77,6 +79,8 @@ export const useTrackDragger = (trackList: TrackItem[]) => {
         isDraggingRef.current = true;
         dragStartXRef.current = clientX;
         selectedTrackItemRef.current = trackItemElement;
+
+        setPlayState(PlayState.PAUSE);
 
         if (trackItem) {
             originalStartLeftRef.current = trackItem.startLeft;
@@ -137,6 +141,7 @@ export const useTrackDragger = (trackList: TrackItem[]) => {
                         `${originalStartLeftRef.current}px`;
                 }
             }
+            setPlayState(PlayState.READY);
             isDraggingRef.current = false;
             selectedTrackItemRef.current = null;
             document.removeEventListener('mousemove', handleDragMove);

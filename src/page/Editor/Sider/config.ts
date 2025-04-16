@@ -27,16 +27,16 @@ export const toolConfigList: ToolConfig[] = [
         component: Media,
     },
     {
-        type: toolType.AUDIO,
-        text: '音频库',
+        type: toolType.DRAWER,
+        text: '图片库',
     },
     {
         type: toolType.TEXT,
         text: '文字',
     },
     {
-        type: toolType.DRAWER,
-        text: '图片库',
+        type: toolType.AUDIO,
+        text: '音频库',
     },
     {
         type: toolType.FILTERS,

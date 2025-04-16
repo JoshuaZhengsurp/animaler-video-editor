@@ -11,6 +11,13 @@ import useVideoTrackStore from '@/store/useVideoTrackStore';
 import { getVideoFrameIndexByTimestamp } from '@/utils/ffmpeg/utils';
 import { PlayState, useVideoPlayerStore } from '@/store/useVideoPlayerStore';
 
+interface PlayFrameOption {
+    type: TrackItemType;
+    frame: string | Blob;
+    ret?: any;
+    extra?: any;
+}
+
 interface IProps {
     width: number;
     height: number;
@@ -20,7 +27,7 @@ interface IProps {
 }
 
 /**
- * 渲染逻辑可抽离成hook
+ * todo: 渲染逻辑需要优化，抽离成hook
  */
 export default function CanvasPlayer(props: IProps) {
     const { width, height, videoFile, fps = 30, videoResolution } = props;
@@ -33,6 +40,8 @@ export default function CanvasPlayer(props: IProps) {
     const setPlayState = useVideoPlayerStore((s) => s.setPlayState);
     const curPlayTime = useRef(0); // 当前播放的时间节点, ms
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
+    const offscreenCtxRef = useRef<CanvasRenderingContext2D | null>(null);
 
     const frameIndex = useRef(0);
     const frameTimer = useRef<NodeJS.Timeout>();
@@ -80,19 +89,81 @@ export default function CanvasPlayer(props: IProps) {
         frameTimer.current = undefined;
     };
 
-    const renderFrame = async (playFrame: Blob) => {
-        const img = new Image();
-        img.src = URL.createObjectURL(playFrame);
-
-        img.onload = () => {
+    const renderFrame = async (playFrame: Blob | Array<PlayFrameOption>) => {
+        if (Array.isArray(playFrame)) {
             const ctx = canvasRef.current?.getContext('2d');
-            if (ctx) {
-                // 清除上一帧
-                ctx.clearRect(centerX, centerY, frameWidth, frameHeight);
-                ctx.drawImage(img, centerX, centerY, frameWidth, frameHeight);
+            const offscreenCtx = offscreenCtxRef.current;
+
+            // 合成帧然后渲染
+            if (ctx && offscreenCtx) {
+                // 清除离屏canvas
+                offscreenCtx.clearRect(0, 0, width, height);
+
+                // 使用Promise.all等待所有图片加载完成
+                const drawPromises = playFrame.map((frameItem) => {
+                    return new Promise<{ renderFn: () => void }>((resolve) => {
+                        if (frameItem.type === 'video') {
+                            const img = new Image();
+                            img.src = URL.createObjectURL(frameItem.frame as Blob);
+                            img.onload = () => {
+                                resolve({
+                                    renderFn: () => {
+                                        offscreenCtx.drawImage(
+                                            img,
+                                            centerX,
+                                            centerY,
+                                            frameWidth,
+                                            frameHeight,
+                                        );
+                                        URL.revokeObjectURL(img.src);
+                                    },
+                                });
+                            };
+                        } else if (frameItem.type === 'image') {
+                            const img = new Image();
+                            img.src = frameItem.frame as string;
+                            img.onload = () => {
+                                resolve({
+                                    renderFn: () => {
+                                        const { playerPosition, size } = frameItem.extra!;
+                                        offscreenCtx.drawImage(
+                                            img,
+                                            playerPosition.x,
+                                            playerPosition.y,
+                                            size.width,
+                                            size.height,
+                                        );
+                                    },
+                                });
+                            };
+                        }
+                    });
+                });
+
+                // 等待所有图片加载完成后，一次性绘制到主canvas
+                Promise.all(drawPromises)
+                    .then((res) => {
+                        res.forEach((item) => {
+                            item.renderFn && item.renderFn();
+                        });
+                    })
+                    .then(() => {
+                        ctx.clearRect(0, 0, width, height);
+                        ctx.drawImage(offscreenCanvasRef.current!, 0, 0);
+                    });
             }
-            URL.revokeObjectURL(img.src);
-        };
+        } else {
+            const img = new Image();
+            img.src = URL.createObjectURL(playFrame);
+            img.onload = () => {
+                const ctx = canvasRef.current?.getContext('2d');
+                if (ctx) {
+                    ctx.clearRect(0, 0, width, height);
+                    ctx.drawImage(img, centerX, centerY, frameWidth, frameHeight);
+                }
+                URL.revokeObjectURL(img.src);
+            };
+        }
     };
 
     const renderDefaultFrame = async () => {
@@ -122,35 +193,59 @@ export default function CanvasPlayer(props: IProps) {
             };
         }
 
-        const playTimestamp =
-            fixFloat(playingTrackList[0].playStartTime / 1000, 3) +
-            (time - fixFloat(playingTrackList[0].startTime / 1000, 3)); // 单位为s
+        const firstFramePromise = playingTrackList.map(
+            (playingTrackItem: TrackItem | ImageTrackItem) => {
+                if (playingTrackItem.type === 'image') {
+                    return new Promise<PlayFrameOption>((resolve) => {
+                        resolve({
+                            type: playingTrackItem.type,
+                            frame: playingTrackItem.path,
+                            extra: {
+                                playerPosition: (playingTrackItem as ImageTrackItem).playerPosition,
+                                size: (playingTrackItem as ImageTrackItem).size,
+                            },
+                        });
+                    });
+                } else {
+                    return new Promise<PlayFrameOption>(async (resolve) => {
+                        const playTimestamp =
+                            fixFloat(playingTrackItem.playStartTime / 1000, 3) +
+                            (time - fixFloat(playingTrackItem.startTime / 1000, 3)); // 单位为s
 
-        // 需要对curPlayTime时间进行细微修正（-1/fps~1/fps），切换音轨切片时会有误差，导致获取切片时有问题
-        const { fixedTimestamp } = fixPlayerFrameTime(playTimestamp * 1000, frameInterval);
-        curPlayTime.current += fixedTimestamp - playTimestamp * 1000;
+                        // 需要对curPlayTime时间进行细微修正（-1/fps~1/fps），切换音轨切片时会有误差，导致获取切片时有问题
+                        const { fixedTimestamp } = fixPlayerFrameTime(
+                            playTimestamp * 1000,
+                            frameInterval,
+                        );
+                        curPlayTime.current += fixedTimestamp - playTimestamp * 1000;
+                        const { startPFrameTimestamp, frameIndex: FixedFrameIndex } =
+                            getVideoFrameIndexByTimestamp(fixedTimestamp / 1000, fps);
+                        frameIndex.current = FixedFrameIndex;
 
-        // 先假设只有单轨道
-        const { startPFrameTimestamp, frameIndex: FixedFrameIndex } = getVideoFrameIndexByTimestamp(
-            fixedTimestamp / 1000,
-            fps,
+                        // console.log('genFirstPlayFrame FixedFrameIndex', FixedFrameIndex, time, playTimestamp);
+
+                        const { firstFrame } = await ffmpegManager.extractFrame({
+                            inputFile: playingTrackItem.path,
+                            time: startPFrameTimestamp,
+                            w: videoResolution?.width,
+                            h: videoResolution?.height,
+                            fps,
+                            frameIndex: frameIndex.current,
+                        });
+                        resolve({
+                            type: playingTrackItem.type,
+                            frame: firstFrame,
+                            ret: startPFrameTimestamp,
+                        });
+                    });
+                }
+            },
         );
-        frameIndex.current = FixedFrameIndex;
 
-        // console.log('genFirstPlayFrame FixedFrameIndex', FixedFrameIndex, time, playTimestamp);
+        const result = await Promise.all(firstFramePromise);
+        renderFrame(result);
 
-        const { firstFrame } = await ffmpegManager.extractFrame({
-            inputFile: playingTrackList[0].path,
-            time: startPFrameTimestamp,
-            w: videoResolution?.width,
-            h: videoResolution?.height,
-            fps,
-            frameIndex: frameIndex.current,
-        });
-        renderFrame(firstFrame);
-        return {
-            startPFrameTimestamp,
-        };
+        return result.map((item) => item?.ret);
     };
 
     const checkCurrentTime = (trackList: TrackItem[], time: number) => {
@@ -178,12 +273,39 @@ export default function CanvasPlayer(props: IProps) {
             try {
                 if (playingTrackList.length) {
                     // 渲染track
-                    const frameBlob = await ffmpegManager.getPlayFrame({
-                        inputFile: playingTrackList[0].path,
-                        time: ret.startPFrameTimestamp,
-                        frameIndex: ++frameIndex.current,
-                    });
-                    renderFrame(frameBlob);
+                    const framePromise = playingTrackList.map(
+                        (playingTrackItem: TrackItem | ImageTrackItem, index) => {
+                            if (playingTrackItem.type === 'image') {
+                                return new Promise<PlayFrameOption>((resolve) => {
+                                    resolve({
+                                        type: playingTrackItem.type,
+                                        frame: playingTrackItem.path,
+                                        extra: {
+                                            playerPosition: (playingTrackItem as ImageTrackItem)
+                                                .playerPosition,
+                                            size: (playingTrackItem as ImageTrackItem).size,
+                                        },
+                                    });
+                                });
+                            } else {
+                                let time = ret?.startPFrameTimestamp || ret?.[index];
+                                // console.log(ret, time);
+                                return new Promise<PlayFrameOption>(async (resolve) => {
+                                    const frameBlob = await ffmpegManager.getPlayFrame({
+                                        inputFile: playingTrackItem.path,
+                                        time,
+                                        frameIndex: ++frameIndex.current,
+                                    });
+                                    resolve({
+                                        type: playingTrackItem.type,
+                                        frame: frameBlob,
+                                    });
+                                });
+                            }
+                        },
+                    );
+                    const result = await Promise.all(framePromise);
+                    renderFrame(result);
                 } else {
                     renderDefaultFrame();
                 }
@@ -245,6 +367,19 @@ export default function CanvasPlayer(props: IProps) {
     const stop = () => {
         setPlayState(PlayState.PAUSE);
     };
+
+    // 初始化离屏canvas
+    useEffect(() => {
+        if (width && height) {
+            const offscreenCanvas = document.createElement('canvas');
+            offscreenCanvas.width = width;
+            offscreenCanvas.height = height;
+            const offscreenCtx = offscreenCanvas.getContext('2d');
+
+            offscreenCanvasRef.current = offscreenCanvas;
+            offscreenCtxRef.current = offscreenCtx;
+        }
+    }, [width, height]);
 
     useEffect(() => {
         console.log('hello canvas player', playerState, playingTrackList);

@@ -21,15 +21,10 @@ interface TrackListProps {
  * @todo 视频编辑器的一条音轨中，支持音轨内的拖拽移动
  */
 const TrackList = ({ width, trackList, scale }: TrackListProps) => {
-    const trackListRef = useRef<HTMLDivElement>(null);
-    const { handleDragStart } = useTrackDragger(trackList, trackListRef);
+    const { handleDragStart } = useTrackDragger(trackList);
 
     return (
-        <div
-            ref={trackListRef}
-            className={styles['track-list']}
-            style={{ minWidth: '100%', width: `${width}px` }}
-        >
+        <div className={styles['track-list']} style={{ minWidth: '100%', width: `${width}px` }}>
             {trackList.map((track) => (
                 <TrackItem
                     track={track}

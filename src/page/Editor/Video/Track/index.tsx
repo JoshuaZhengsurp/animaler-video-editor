@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useVideoStore } from '@/store/useVideoDataStore';
 
 import Duration from '@/components/VideoTrack/Duration';
@@ -21,12 +21,11 @@ export default function Track() {
     const tracks = useVideoTrackStore((s) => s.tracks);
     const selectTrackId = useVideoTrackStore((s) => s.selectedTrackId);
     const splitTrackItem = useVideoTrackStore((s) => s.splitTrackItem);
-
-    const videoList = useVideoStore((s) => s.videos);
-    const splitVideo = useVideoStore((s) => s.splitVideo);
+    const setCurrentTime = useVideoTrackStore((s) => s.setCurrentTime);
     const setPlayerState = useVideoPlayerStore((s) => s.setPlayState);
 
     const [pointerPosition, setPointerPosition] = useState(0);
+    const initLockRef = useRef(false);
 
     // const mainVideo = useMemo(() => videoList[0] || null, [videoList]);
 
@@ -63,7 +62,10 @@ export default function Track() {
         }
     };
 
-    // 使用isDragTimePointerEffect目的是
+    // 音轨删除
+    const handleVideoDelete = () => {};
+
+    // 使用isDragTimePointerEffect目的是，避免拖拽时间轴是重复触发
     useEffect(() => {
         if (!isDragTimePointerEffect.current) {
             handleUpdatePosition(videoTrackStore.currentTime);
@@ -72,13 +74,24 @@ export default function Track() {
         }
     }, [currentTime]);
 
+    // 首次track完成加载后，让player设置为ready状态
+    useEffect(() => {
+        if (!initLockRef.current && tracks.length) {
+            console.log('initLockRef', tracks);
+            initLockRef.current = true;
+            setCurrentTime(0);
+            setPlayerState(PlayState.READY);
+        }
+    }, [tracks]);
+
     return (
         <div className={style['track']}>
             <div className={style['track-banner']}>
                 {/* todo: 更多操作 */}
                 {/* todo: duration  */}
-                <div className={style['track-banner-left']} onClick={handleVideoSplit}>
-                    剪切
+                <div className={style['track-banner-left']}>
+                    <span onClick={handleVideoSplit}>剪切</span>
+                    <span onClick={handleVideoDelete}>删除</span>
                 </div>
                 <Duration
                     className='h-8 flex items-center text-xs'

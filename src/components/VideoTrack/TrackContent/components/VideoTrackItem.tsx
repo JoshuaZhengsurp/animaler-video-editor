@@ -56,7 +56,7 @@ export default function VideoTrackItem({ track, scale = 1, handleDragStart }: Tr
         const ret = await getVideoTrackFrame(
             track.resourceId,
             track.trackWidth || 0,
-            track.startTime,
+            track.playStartTime,
         );
         setTrackFrames(ret);
     };
@@ -67,8 +67,9 @@ export default function VideoTrackItem({ track, scale = 1, handleDragStart }: Tr
         }
     };
 
+    // todo: 需要优化，每次track变更都可能导致getTrackFrame重新执行
     useEffect(() => {
-        console.log(track);
+        console.log('trackItem', track);
         setTimeout(() => getTrackFrame(), 100);
     }, [track]);
 

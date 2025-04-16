@@ -19,19 +19,39 @@ interface IProps {
     videoResolution?: Record<string, any>;
 }
 
+/**
+ * 渲染逻辑可抽离成hook
+ */
 export default function CanvasPlayer(props: IProps) {
     const { width, height, videoFile, fps = 30, videoResolution } = props;
     const setCurrentTime = useVideoTrackStore((s) => s.setCurrentTime);
     const getCurrentTime = useVideoTrackStore((s) => s.getCurrentTime);
-    const duration = useVideoTrackStore((s) => s.duration); // 单位是ms，需要转换为s
+    const duration = useVideoTrackStore((s) => s.duration); // 单位是ms，ffmpeg命令执行单位为s，需要转换
+    const playingTrackList = useVideoTrackStore((s) => s.playingTrackList);
+    const tracks = useVideoTrackStore((s) => s.tracks);
     const playerState = useVideoPlayerStore((s) => s.playState);
     const setPlayState = useVideoPlayerStore((s) => s.setPlayState);
-    const curPlayTime = useRef(0); // 当前播放的时间节点
+    const curPlayTime = useRef(0); // 当前播放的时间节点, ms
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     const frameIndex = useRef(0);
     const frameTimer = useRef<NodeJS.Timeout>();
     const frameInterval = useMemo(() => 1000 / fps, [fps]);
+
+    const nearestTrackTimestamp = useMemo(() => {
+        let nearestTrackTimestamp = Infinity;
+        if (!playingTrackList.length) {
+            const currentTime = getCurrentTime();
+            for (const item of tracks) {
+                if (item.startTime >= currentTime) {
+                    nearestTrackTimestamp = Math.min(item.startTime, nearestTrackTimestamp);
+                }
+            }
+        }
+        // console.log('nearestTrackTimestamp', nearestTrackTimestamp, tracks, getCurrentTime());
+        return nearestTrackTimestamp === Infinity ? -1 : nearestTrackTimestamp;
+    }, [tracks, playingTrackList]);
+
     const [frameWidth, frameHeight, centerX, centerY] = useMemo(() => {
         if (width && height && videoResolution?.ratio) {
             try {
@@ -84,21 +104,43 @@ export default function CanvasPlayer(props: IProps) {
         }
     };
 
+    // startPFrameTimestamp 导轨切片实际
     const genFirstPlayFrame = async (time: number) => {
         // console.log('genFirstPlayFrame', videoFile, canvasRef.current, time, duration);
+        // debugger;
         if (!canvasRef.current || !videoFile) return null;
         if (time * 1000 > duration) {
             renderDefaultFrame();
             return null;
         }
+
+        if (!playingTrackList.length) {
+            const { startPFrameTimestamp } = getVideoFrameIndexByTimestamp(time, fps);
+            renderDefaultFrame();
+            return {
+                startPFrameTimestamp,
+            };
+        }
+
+        const playTimestamp =
+            fixFloat(playingTrackList[0].playStartTime / 1000, 3) +
+            (time - fixFloat(playingTrackList[0].startTime / 1000, 3)); // 单位为s
+
+        // 需要对curPlayTime时间进行细微修正（-1/fps~1/fps），切换音轨切片时会有误差，导致获取切片时有问题
+        const { fixedTimestamp } = fixPlayerFrameTime(playTimestamp * 1000, frameInterval);
+        curPlayTime.current += fixedTimestamp - playTimestamp * 1000;
+
+        // 先假设只有单轨道
         const { startPFrameTimestamp, frameIndex: FixedFrameIndex } = getVideoFrameIndexByTimestamp(
-            time,
+            fixedTimestamp / 1000,
             fps,
         );
         frameIndex.current = FixedFrameIndex;
 
+        // console.log('genFirstPlayFrame FixedFrameIndex', FixedFrameIndex, time, playTimestamp);
+
         const { firstFrame } = await ffmpegManager.extractFrame({
-            inputFile: videoFile,
+            inputFile: playingTrackList[0].path,
             time: startPFrameTimestamp,
             w: videoResolution?.width,
             h: videoResolution?.height,
@@ -111,39 +153,77 @@ export default function CanvasPlayer(props: IProps) {
         };
     };
 
-    /**
-     * @todo 可能出现定时器未被clear的情况
-     */
+    const checkCurrentTime = (trackList: TrackItem[], time: number) => {
+        for (let i = 0; i < trackList.length; ++i) {
+            if (
+                trackList[i].startTime > time ||
+                time >= trackList[i].startTime + trackList[i].duration
+            ) {
+                return true;
+            }
+        }
+        return false;
+    };
+
     const genPlayFrame = async (time: number) => {
         const ret = await genFirstPlayFrame(time);
         if (!ret) return;
 
         curPlayTime.current += frameInterval;
+        // console.log('genPlayFrame', time, playingTrackList);
 
+        // 确保旧的定时器被清理了（！！！非常重要）
+        frameTimer.current && clearTimer();
         frameTimer.current = setInterval(async () => {
             try {
-                const frameBlob = await ffmpegManager.getPlayFrame({
-                    inputFile: videoFile!,
-                    time: ret.startPFrameTimestamp,
-                    frameIndex: ++frameIndex.current,
-                });
+                if (playingTrackList.length) {
+                    // 渲染track
+                    const frameBlob = await ffmpegManager.getPlayFrame({
+                        inputFile: playingTrackList[0].path,
+                        time: ret.startPFrameTimestamp,
+                        frameIndex: ++frameIndex.current,
+                    });
+                    renderFrame(frameBlob);
+                } else {
+                    renderDefaultFrame();
+                }
                 setCurrentTime(curPlayTime.current);
                 curPlayTime.current += frameInterval;
-                renderFrame(frameBlob);
+
+                // debugger;
+
+                // 播放音轨需要变动了
+                if (nearestTrackTimestamp !== -1 && nearestTrackTimestamp <= curPlayTime.current) {
+                    clearTimer();
+                    setCurrentTime(curPlayTime.current);
+                    return;
+                }
+
+                const shouldRestartGenPlayFrame = checkCurrentTime(
+                    playingTrackList,
+                    curPlayTime.current,
+                );
                 // console.log(
-                //     playerState,
-                //     curPlayTime.current,
-                //     frameIndex.current,
-                //     frameTimer.current,
+                //     'shouldRestartGenPlayFrame',
+                //     shouldRestartGenPlayFrame,
+                //     playingTrackList,
                 // );
+
                 if (
                     playerState !== PlayState.PLAY ||
-                    cmpFloat(duration, curPlayTime.current) ||
+                    shouldRestartGenPlayFrame ||
                     frameIndex.current >= fps
                 ) {
+                    // console.log('genPlayFrame', frameIndex.current, fps);
                     clearTimer();
-                    if (!cmpFloat(duration, curPlayTime.current)) {
-                        genPlayFrame(fixFloat(curPlayTime.current / 1000, 3));
+                    // 如果不需要更新，则继续播放；反之，更新playingTrackList再播放
+                    if (shouldRestartGenPlayFrame) {
+                        setCurrentTime(curPlayTime.current);
+                    } else if (!cmpFloat(duration, curPlayTime.current)) {
+                        setTimeout(
+                            () => genPlayFrame(fixFloat(curPlayTime.current / 1000, 3)),
+                            frameInterval,
+                        );
                     } else {
                         curPlayTime.current = 0;
                     }
@@ -167,6 +247,7 @@ export default function CanvasPlayer(props: IProps) {
     };
 
     useEffect(() => {
+        console.log('hello canvas player', playerState, playingTrackList);
         if (playerState === PlayState.PLAY) {
             const { fixedTimestamp, hasFix } = fixPlayerFrameTime(getCurrentTime(), frameInterval);
             curPlayTime.current = fixedTimestamp;
@@ -188,9 +269,7 @@ export default function CanvasPlayer(props: IProps) {
                 genFirstPlayFrame(fixFloat(curPlayTime.current / 1000, 3));
             }
         }
-    }, [playerState]);
-
-    useEffect(() => {}, []);
+    }, [playerState, playingTrackList]);
 
     return (
         <div
@@ -210,9 +289,6 @@ export default function CanvasPlayer(props: IProps) {
                 >
                     {playerState === PlayState.PLAY ? 'Stop' : 'Play'}
                 </button>
-                <div className='text-white'>
-                    {Math.floor(curPlayTime.current / 1000)}s / {Math.floor(duration / 1000)}s
-                </div>
             </div>
         </div>
     );

@@ -1,6 +1,18 @@
 import { create } from 'zustand';
 import { getNanoid } from '@/utils/common';
 
+const playingTrackListWeakset = new Set<TrackItem>();
+
+const checkTrackItemInWeakset = (trackList: TrackItem[]) => {
+    for (let i = 0; i < trackList.length; ++i) {
+        if (!playingTrackListWeakset.has(trackList[i])) {
+            return false;
+        }
+    }
+    return true;
+};
+
+// todo 还需要描述元素间的层级关系
 interface VideoTrackState {
     duration: number; // 视频总时长（秒）
     currentTime: number; // 当前播放时间（秒）
@@ -12,6 +24,7 @@ interface VideoTrackState {
     selectedTrackId: string;
     tracks: TrackItem[];
     trackFrameMap: Record<string, VideoFrame[]>;
+    playingTrackList: TrackItem[]; // 正在播放的track
 
     // Actions
     setDuration: (duration: number) => void;
@@ -30,6 +43,7 @@ interface VideoTrackState {
     addTrackItem: (trackItem: TrackItem, toTrackIndex?: number) => void;
     updateDuration: (tracks: TrackItem[]) => void;
     splitTrackItem: (selectedTrackId: string) => void;
+    updatePlayingTrackList: (time: number) => void;
 }
 
 const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
@@ -41,13 +55,17 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
     trackFrameMap: {},
     tracks: [],
     selectedTrackId: '',
+    playingTrackList: [],
 
     setDuration: (duration) => set({ duration }),
-    setCurrentTime: (time) => set({ currentTime: time }),
     setTrackWidth: (width) => set({ trackWidth: width }),
     setTimeLineCeilWidth: (ceil) => set({ timeLineCeilWidth: ceil }),
     setTimeIntervalCeil: (t) => set({ timeIntervalCeil: t }),
     setSelectedTrackId: (id) => set({ selectedTrackId: id }),
+    setCurrentTime: (time) => {
+        set({ currentTime: time });
+        get().updatePlayingTrackList(time);
+    },
 
     getCurrentTime: () => {
         return get().currentTime;
@@ -73,7 +91,13 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
     },
 
     addTrackItem: (trackItem: TrackItem, toTrackIndex?: number) => {
-        const { tracks, updateDuration, getCurrentPositionByTime } = get();
+        const {
+            tracks,
+            currentTime,
+            updateDuration,
+            updatePlayingTrackList,
+            getCurrentPositionByTime,
+        } = get();
         const idx = tracks.findIndex((item) => {
             return item.id === trackItem.id;
         });
@@ -93,6 +117,11 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
                 updateDuration(newTracks);
                 return { tracks: newTracks, selectedTrackId: trackItem.id };
             });
+            // Then update playingTrackList after tracks are updated
+            set(() => {
+                updatePlayingTrackList(currentTime);
+                return {};
+            });
         } else {
             set((s) => {
                 console.log('set tracks', s.tracks, idx, trackItem);
@@ -100,6 +129,11 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
                 const newTracks = [...s.tracks];
                 updateDuration(newTracks);
                 return { tracks: newTracks, selectedTrackId: trackItem.id };
+            });
+            // Then update playingTrackList after tracks are updated
+            set(() => {
+                updatePlayingTrackList(currentTime);
+                return {};
             });
         }
     },
@@ -110,6 +144,26 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
             duration = Math.max(duration, tracks[i].duration + tracks[i].startTime);
         }
         set({ duration });
+    },
+
+    updatePlayingTrackList: (time: number) => {
+        // console.log('setCurrentTime time', time);
+        const { tracks, playingTrackList } = get();
+        const newPlayingTrackList = tracks.filter((item) => {
+            return item.startTime <= time && time < item.startTime + item.duration;
+        });
+        // console.log('setCurrentTime before', newPlayingTrackList, playingTrackList, tracks);
+        if (
+            playingTrackList.length !== newPlayingTrackList.length ||
+            !checkTrackItemInWeakset(newPlayingTrackList)
+        ) {
+            set({ playingTrackList: newPlayingTrackList });
+            playingTrackListWeakset.clear();
+            newPlayingTrackList.forEach((item) => {
+                playingTrackListWeakset.add(item);
+            });
+            // console.log('setCurrentTime after', newPlayingTrackList);
+        }
     },
 
     splitTrackItem: (selectTrackId: string) => {

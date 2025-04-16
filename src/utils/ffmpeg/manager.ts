@@ -207,7 +207,7 @@ class FFmpegManager {
                 fps,
             );
 
-            console.log('commands', commands);
+            // console.log('commands', commands);
 
             await this.ffmpeg.exec(commands);
 

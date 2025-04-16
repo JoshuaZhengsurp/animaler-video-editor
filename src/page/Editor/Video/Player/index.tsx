@@ -20,7 +20,6 @@ export default function VideoPlayer(props: IProps) {
     const playerRef = useRef<HTMLDivElement>(null);
 
     const videoList = useVideoStore((s) => s.videos);
-    const setPlayState = useVideoPlayerStore((s) => s.setPlayState);
     const mainVideo = useMemo(() => videoList?.[0], [videoList]);
 
     /**
@@ -45,13 +44,6 @@ export default function VideoPlayer(props: IProps) {
     useEffect(() => {
         setCanvasPlayerWH(getCanvasPlayerWH() || []);
     }, [playerWHRate]);
-
-    // 假设初始数据加载完了
-    useEffect(() => {
-        if (mainVideo?.status === VideoLoadStatus.DONE) {
-            setPlayState(PlayState.READY);
-        }
-    }, [mainVideo]);
 
     return (
         <div className='w-full h-full flex justify-center' ref={playerRef}>

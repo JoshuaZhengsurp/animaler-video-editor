@@ -12,7 +12,8 @@ export default function Media() {
     const messageRef = useRef<HTMLParagraphElement | null>(null);
 
     const { isLoading } = useStateStore();
-    const { videos, addVideo } = useVideoStore();
+    const { videos, addVideo, getVideoItem } = useVideoStore();
+
     const addTrackItem = useVideoTrackStore((s) => s.addTrackItem);
 
     const fileInfoRef = useRef<Record<string, any> | null>(null);
@@ -42,9 +43,30 @@ export default function Media() {
                     resourceId: videoItem.id,
                     trackIndex: 0,
                     startLeft: 0,
+                    playStartTime: 0,
+                    playEndTime: videoItem?.duration || 0,
                 };
                 addTrackItem(trackItem);
             }
+        }
+    };
+
+    const handleAddVideoToTrack = (rId: string) => {
+        const videoItem = getVideoItem(rId);
+        if (videoItem) {
+            const trackItem: TrackItem = {
+                id: getNanoid(9),
+                type: 'video',
+                duration: videoItem?.duration || 0,
+                startTime: 0,
+                path: videoItem.path,
+                resourceId: videoItem.id,
+                trackIndex: 0,
+                startLeft: 0,
+                playStartTime: 0,
+                playEndTime: videoItem?.duration || 0,
+            };
+            addTrackItem(trackItem);
         }
     };
 
@@ -69,6 +91,8 @@ export default function Media() {
                             videoData={video.data}
                             title={video.name}
                             duration={video.info?.input?.Duration || ''}
+                            resourceId={video.id}
+                            handleAddVideoToTrack={handleAddVideoToTrack}
                         />
                     ))}
             </div>

@@ -1,8 +1,7 @@
 import React, { Fragment, useMemo, useRef } from 'react';
 import TrackItem from './components/VideoTrackItem';
+import ImageTrackItem from './components/ImageTrackItem';
 import styles from './index.module.scss';
-import useVideoTrackStore from '@/store/useVideoTrackStore';
-import { VideoItem } from '@/store/useVideoDataStore';
 import { useTrackDragger } from '@/hooks/useTrackDragger';
 
 interface VideoTrackProps {
@@ -21,23 +20,27 @@ interface TrackListProps {
  * @todo 视频编辑器的一条音轨中，支持音轨内的拖拽移动
  */
 const TrackList = ({ width, trackList, scale }: TrackListProps) => {
-    const trackListRef = useRef<HTMLDivElement>(null);
-    const { handleDragStart } = useTrackDragger(trackList, trackListRef);
+    const { handleDragStart } = useTrackDragger(trackList);
 
     return (
-        <div
-            ref={trackListRef}
-            className={styles['track-list']}
-            style={{ minWidth: '100%', width: `${width}px` }}
-        >
-            {trackList.map((track) => (
-                <TrackItem
-                    track={track}
-                    scale={scale}
-                    key={track.id}
-                    handleDragStart={handleDragStart}
-                />
-            ))}
+        <div className={styles['track-list']} style={{ minWidth: '100%', width: `${width}px` }}>
+            {trackList.map((track) =>
+                track.type === 'image' ? (
+                    <ImageTrackItem
+                        track={track}
+                        scale={scale}
+                        key={track.id}
+                        handleDragStart={handleDragStart}
+                    />
+                ) : (
+                    <TrackItem
+                        track={track}
+                        scale={scale}
+                        key={track.id}
+                        handleDragStart={handleDragStart}
+                    />
+                ),
+            )}
         </div>
     );
 };

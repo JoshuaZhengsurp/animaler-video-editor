@@ -24,6 +24,11 @@
         left: 0.5rem;
         float: left;
         font-size: 0.8rem;
+
+        display: flex;
+        justify-content: flex-start;
+        flex-direction: row;
+        gap: 0.25rem;
     }
 }
 

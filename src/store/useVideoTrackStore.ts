@@ -1,6 +1,18 @@
 import { create } from 'zustand';
 import { getNanoid } from '@/utils/common';
 
+const playingTrackListWeakset = new Set<TrackItem>();
+
+const checkTrackItemInWeakset = (trackList: TrackItem[]) => {
+    for (let i = 0; i < trackList.length; ++i) {
+        if (!playingTrackListWeakset.has(trackList[i])) {
+            return false;
+        }
+    }
+    return true;
+};
+
+// todo 还需要描述元素间的层级关系
 interface VideoTrackState {
     duration: number; // 视频总时长（秒）
     currentTime: number; // 当前播放时间（秒）
@@ -12,6 +24,7 @@ interface VideoTrackState {
     selectedTrackId: string;
     tracks: TrackItem[];
     trackFrameMap: Record<string, VideoFrame[]>;
+    playingTrackList: TrackItem[]; // 正在播放的track
 
     // Actions
     setDuration: (duration: number) => void;
@@ -24,16 +37,18 @@ interface VideoTrackState {
     // getter
     getCurrentTime: () => number;
     getCurrentPositionByTime: (t: number) => number; // 计算当前时间对应的像素位置
-    getCurrentPositionByPosition: (p: number) => number; // 计算当前像素对应的时间戳
+    getCurrentTimeByPosition: (p: number) => number; // 计算当前像素对应的时间戳
     getTrackItem: (id: string) => TrackItem | null;
 
     addTrackItem: (trackItem: TrackItem, toTrackIndex?: number) => void;
-    updateDuration: (endTimestamp: number) => void;
+    updateDuration: (tracks: TrackItem[]) => void;
     splitTrackItem: (selectedTrackId: string) => void;
+    updatePlayingTrackList: (time: number) => void;
+    deleteTrackItem: (selectTrackId: string) => void;
 }
 
 const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
-    duration: 0,
+    duration: 0, // 音轨编辑的总时长
     currentTime: 0,
     trackWidth: 0,
     timeLineCeilWidth: 0,
@@ -41,13 +56,17 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
     trackFrameMap: {},
     tracks: [],
     selectedTrackId: '',
+    playingTrackList: [],
 
     setDuration: (duration) => set({ duration }),
-    setCurrentTime: (time) => set({ currentTime: time }),
     setTrackWidth: (width) => set({ trackWidth: width }),
     setTimeLineCeilWidth: (ceil) => set({ timeLineCeilWidth: ceil }),
     setTimeIntervalCeil: (t) => set({ timeIntervalCeil: t }),
     setSelectedTrackId: (id) => set({ selectedTrackId: id }),
+    setCurrentTime: (time) => {
+        set({ currentTime: time });
+        get().updatePlayingTrackList(time);
+    },
 
     getCurrentTime: () => {
         return get().currentTime;
@@ -59,9 +78,10 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
         }
         return (currentTime / timeIntervalCeil) * timeLineCeilWidth;
     },
-    getCurrentPositionByPosition: (position: number) => {
+    getCurrentTimeByPosition: (position: number) => {
         const { timeIntervalCeil, timeLineCeilWidth, trackWidth } = get();
-        if (position < 0 || position > trackWidth) {
+        // 对这段表示怀疑position > trackWidth
+        if (position < 0 /* || position > trackWidth */) {
             return -1;
         }
         const currentTime = (position / timeLineCeilWidth) * timeIntervalCeil;
@@ -72,7 +92,13 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
     },
 
     addTrackItem: (trackItem: TrackItem, toTrackIndex?: number) => {
-        const { tracks, updateDuration, getCurrentPositionByTime } = get();
+        const {
+            tracks,
+            currentTime,
+            updateDuration,
+            updatePlayingTrackList,
+            getCurrentPositionByTime,
+        } = get();
         const idx = tracks.findIndex((item) => {
             return item.id === trackItem.id;
         });
@@ -88,22 +114,56 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
         if (idx === -1) {
             set((s) => {
                 console.log('set tracks', s.tracks, idx, trackItem);
-                return { tracks: [...s.tracks, trackItem], selectedTrackId: trackItem.id };
+                const newTracks = [...s.tracks, trackItem];
+                updateDuration(newTracks);
+                return { tracks: newTracks, selectedTrackId: trackItem.id };
+            });
+            // Then update playingTrackList after tracks are updated
+            set(() => {
+                updatePlayingTrackList(currentTime);
+                return {};
             });
         } else {
             set((s) => {
                 console.log('set tracks', s.tracks, idx, trackItem);
                 s.tracks[idx] = trackItem;
-                return { tracks: [...s.tracks], selectedTrackId: trackItem.id };
+                const newTracks = [...s.tracks];
+                updateDuration(newTracks);
+                return { tracks: newTracks, selectedTrackId: trackItem.id };
+            });
+            // Then update playingTrackList after tracks are updated
+            set(() => {
+                updatePlayingTrackList(currentTime);
+                return {};
             });
         }
-        updateDuration(trackItem.duration + trackItem.startTime);
     },
 
-    updateDuration: (endTimestamp: number) => {
-        const duration = get().duration;
-        if (duration < endTimestamp) {
-            set({ duration: endTimestamp });
+    updateDuration: (tracks: TrackItem[]) => {
+        let duration = 0;
+        for (let i = 0; i < tracks.length; ++i) {
+            duration = Math.max(duration, tracks[i].duration + tracks[i].startTime);
+        }
+        set({ duration });
+    },
+
+    updatePlayingTrackList: (time: number) => {
+        // console.log('setCurrentTime time', time);
+        const { tracks, playingTrackList } = get();
+        const newPlayingTrackList = tracks.filter((item) => {
+            return item.startTime <= time && time < item.startTime + item.duration;
+        });
+        // console.log('setCurrentTime before', newPlayingTrackList, playingTrackList, tracks);
+        if (
+            playingTrackList.length !== newPlayingTrackList.length ||
+            !checkTrackItemInWeakset(newPlayingTrackList)
+        ) {
+            set({ playingTrackList: newPlayingTrackList });
+            playingTrackListWeakset.clear();
+            newPlayingTrackList.forEach((item) => {
+                playingTrackListWeakset.add(item);
+            });
+            // console.log('setCurrentTime after', newPlayingTrackList);
         }
     },
 
@@ -113,14 +173,16 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
         if (
             selectedTrackItem &&
             selectedTrackItem.startTime < currentTime &&
-            currentTime < selectedTrackItem.duration + selectedTrackItem.duration
+            currentTime < selectedTrackItem.startTime + selectedTrackItem.duration
         ) {
             const trackIndex = selectedTrackItem.trackIndex;
             const leftTrackDuration = currentTime - selectedTrackItem.startTime;
             const rightTrackDuration =
                 selectedTrackItem.startTime + selectedTrackItem.duration - currentTime;
+            const leftTrackPlayEndTime = selectedTrackItem.playStartTime + leftTrackDuration; // 同时也是rightTrack play开始的时间戳
             const leftTrackItem: TrackItem = {
                 ...selectedTrackItem,
+                playEndTime: leftTrackPlayEndTime,
                 duration: leftTrackDuration,
                 trackWidth: getCurrentPositionByTime(leftTrackDuration),
             };
@@ -130,6 +192,8 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
                 duration: rightTrackDuration,
                 trackWidth: getCurrentPositionByTime(rightTrackDuration),
                 startTime: currentTime,
+                playStartTime: leftTrackPlayEndTime,
+                playEndTime: selectedTrackItem.playEndTime,
                 startLeft: leftTrackItem.startLeft + (leftTrackItem.trackWidth || 0),
             };
 
@@ -138,6 +202,26 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
             addTrackItem(leftTrackItem, trackIndex);
             addTrackItem(rightTrackItem, trackIndex);
         }
+    },
+
+    deleteTrackItem: (selectTrackId: string) => {
+        const { tracks, currentTime, updateDuration, updatePlayingTrackList } = get();
+        const newTracks = tracks.filter((item) => item.id !== selectTrackId);
+
+        set((s) => {
+            return {
+                tracks: newTracks,
+                selectedTrackId: '',
+            };
+        });
+
+        // 更新正在播放的轨道列表，对新tracks有依赖
+        set((s) => {
+            updatePlayingTrackList(currentTime);
+            return {};
+        });
+        // 更新总时长
+        updateDuration(newTracks);
     },
 }));
 

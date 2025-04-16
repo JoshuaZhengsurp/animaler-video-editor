@@ -2,7 +2,7 @@ import im1PNG from '../assets/im1.png';
 import im2PNG from '../assets/im2.png';
 import im3PNG from '../assets/im3.jpg';
 
-export const mockAudioData = {
+export const mockImgData = {
     type: 'text',
     items: [
         {
@@ -17,7 +17,7 @@ export const mockAudioData = {
         },
         {
             name: 'im3    ',
-            id: 1,
+            id: 2,
             cover: im3PNG,
         },
     ],

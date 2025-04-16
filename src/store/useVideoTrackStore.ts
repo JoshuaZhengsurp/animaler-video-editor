@@ -44,6 +44,7 @@ interface VideoTrackState {
     updateDuration: (tracks: TrackItem[]) => void;
     splitTrackItem: (selectedTrackId: string) => void;
     updatePlayingTrackList: (time: number) => void;
+    deleteTrackItem: (selectTrackId: string) => void;
 }
 
 const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
@@ -201,6 +202,26 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
             addTrackItem(leftTrackItem, trackIndex);
             addTrackItem(rightTrackItem, trackIndex);
         }
+    },
+
+    deleteTrackItem: (selectTrackId: string) => {
+        const { tracks, currentTime, updateDuration, updatePlayingTrackList } = get();
+        const newTracks = tracks.filter((item) => item.id !== selectTrackId);
+
+        set((s) => {
+            return {
+                tracks: newTracks,
+                selectedTrackId: '',
+            };
+        });
+
+        // 更新正在播放的轨道列表，对新tracks有依赖
+        set((s) => {
+            updatePlayingTrackList(currentTime);
+            return {};
+        });
+        // 更新总时长
+        updateDuration(newTracks);
     },
 }));
 

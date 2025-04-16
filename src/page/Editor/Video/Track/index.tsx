@@ -21,6 +21,7 @@ export default function Track() {
     const tracks = useVideoTrackStore((s) => s.tracks);
     const selectTrackId = useVideoTrackStore((s) => s.selectedTrackId);
     const splitTrackItem = useVideoTrackStore((s) => s.splitTrackItem);
+    const deleteTrackItem = useVideoTrackStore((s) => s.deleteTrackItem);
     const setCurrentTime = useVideoTrackStore((s) => s.setCurrentTime);
     const setPlayerState = useVideoPlayerStore((s) => s.setPlayState);
 
@@ -63,7 +64,11 @@ export default function Track() {
     };
 
     // 音轨删除
-    const handleVideoDelete = () => {};
+    const handleVideoDelete = () => {
+        if (selectTrackId) {
+            deleteTrackItem(selectTrackId);
+        }
+    };
 
     // 使用isDragTimePointerEffect目的是，避免拖拽时间轴是重复触发
     useEffect(() => {

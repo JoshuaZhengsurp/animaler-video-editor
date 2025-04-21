@@ -10,6 +10,7 @@ import Audio from './Audio';
 import Text from './Text';
 import Drawer from './Drawer';
 import TextEditor from './Text/editor';
+import ImageEditor from './Drawer/editor';
 
 export default function Sider() {
     // const text = useSiderStore((state) => state.text);
@@ -26,6 +27,7 @@ export default function Sider() {
                 {type === toolType.TEXT && <Text />}
                 {type === toolType.DRAWER && <Drawer />}
                 {type === toolType.TEXT_EDITOR && <TextEditor />}
+                {type === toolType.DRAWER_EDITOR && <ImageEditor />}
             </div>
         </>
     );

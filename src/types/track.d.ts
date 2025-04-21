@@ -61,6 +61,7 @@ interface TextTrackItem extends BaseTrackItem {
 
 interface ImageTrackItem extends BaseTrackItem {
     type: 'image';
+    opacity: number;
     playerPosition: {
         x: number;
         y: number;

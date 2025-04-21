@@ -76,7 +76,12 @@ export default function useFrameRender({
                             img.onload = () => {
                                 resolve({
                                     renderFn: () => {
-                                        const { playerPosition, size } = frameItem.extra!;
+                                        const {
+                                            playerPosition,
+                                            size,
+                                            opacity = 1.0,
+                                        } = frameItem.extra!;
+                                        offscreenCtx.globalAlpha = opacity;
                                         offscreenCtx.drawImage(
                                             img,
                                             playerPosition.x,
@@ -84,6 +89,7 @@ export default function useFrameRender({
                                             size.width,
                                             size.height,
                                         );
+                                        offscreenCtx.globalAlpha = 1;
                                     },
                                     extra: 'img',
                                 });
@@ -156,6 +162,7 @@ export const genImageFrameRenderTask = (playingTrackItem: ImageTrackItem) => {
             extra: {
                 playerPosition: playingTrackItem.playerPosition,
                 size: playingTrackItem.size,
+                opacity: playingTrackItem.opacity,
             },
         });
     });

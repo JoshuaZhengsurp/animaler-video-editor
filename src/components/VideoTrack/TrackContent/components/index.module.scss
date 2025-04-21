@@ -4,7 +4,8 @@
     justify-content: flex-start;
     width: 100%;
     height: 3.5rem;
-    background: rgba(0, 0, 0, 0.1);
+    background: #1c1d20;
+    // background: #1c1d20;
     overflow: hidden;
     z-index: 11;
     border-radius: 0.6rem;
@@ -21,7 +22,7 @@
 .track-item {
     position: relative;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: transparent;
     // overflow: hidden;
 
     display: flex;
@@ -68,7 +69,7 @@
 
 .frames-container {
     position: relative;
-    width: 100%;
+    // width: 100%;
     height: 100%;
     display: flex;
     flex-direction: row;

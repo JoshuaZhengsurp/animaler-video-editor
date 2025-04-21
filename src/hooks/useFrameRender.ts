@@ -1,3 +1,4 @@
+import { drawText } from '@/utils/canvas';
 import { MutableRefObject } from 'react';
 
 interface PlayFrameOption {
@@ -90,81 +91,10 @@ export default function useFrameRender({
                         } else if (frameItem.type === 'text') {
                             resolve({
                                 renderFn: () => {
-                                    const { content, playerPosition, style } = frameItem.extra!;
-                                    const {
-                                        fontSize,
-                                        color,
-                                        width,
-                                        height,
-                                        fontFamily = 'Arial',
-                                        fontWeight = 'normal',
-                                        fontStyle = 'normal',
-                                        lineHeight = 1.2, // 默认行高为字体大小的1.2倍
-                                    } = style;
-
-                                    // 设置文字样式
-                                    console.log(
-                                        'style: ',
-                                        `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`,
+                                    drawText(
+                                        offscreenCtx,
+                                        frameItem.extra! as Omit<TextTrackItem, 'type'>,
                                     );
-                                    offscreenCtx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
-                                    offscreenCtx.fillStyle = color;
-                                    offscreenCtx.textBaseline = 'top';
-
-                                    // 保存当前状态，以便后续恢复
-                                    offscreenCtx.save();
-
-                                    // 如果指定了宽度，则进行文字换行处理
-                                    // 针对字符进行换行对于性能来说有一定消耗，考虑使用二分有优化；也需要考虑对这类静态的资源使用缓存
-                                    if (width) {
-                                        const text = content;
-                                        let line = '';
-                                        let y = playerPosition.y + fontSize * (lineHeight - 1);
-                                        let charNum = 0;
-
-                                        for (let i = 0; i < text.length; i++) {
-                                            const char = text[i];
-                                            const testLine = line + char;
-                                            const metrics = offscreenCtx.measureText(testLine);
-                                            const testWidth = metrics.width;
-                                            ++charNum;
-
-                                            console.log(testWidth, width);
-                                            if (testWidth > width && charNum > 1) {
-                                                offscreenCtx.fillText(line, playerPosition.x, y);
-                                                line = char;
-                                                charNum = 1;
-                                                y += fontSize * lineHeight;
-                                            } else {
-                                                line = testLine;
-                                            }
-                                        }
-                                        // 绘制最后一行
-                                        if (line) {
-                                            offscreenCtx.fillText(line, playerPosition.x, y);
-                                        }
-                                    } else {
-                                        // 单行文字
-                                        offscreenCtx.fillText(
-                                            content,
-                                            playerPosition.x,
-                                            playerPosition.y,
-                                        );
-                                    }
-
-                                    // 如果指定了高度，则裁剪超出部分
-                                    if (height) {
-                                        offscreenCtx.restore();
-                                        offscreenCtx.save();
-                                        offscreenCtx.beginPath();
-                                        offscreenCtx.rect(
-                                            playerPosition.x,
-                                            playerPosition.y,
-                                            width || Infinity,
-                                            height,
-                                        );
-                                        offscreenCtx.clip();
-                                    }
                                 },
                                 extra: 'text',
                             });
@@ -175,7 +105,6 @@ export default function useFrameRender({
                 // 等待所有图片加载完成后，一次性绘制到主canvas
                 Promise.all(drawPromises)
                     .then((res) => {
-                        console.log('res', res);
                         res.forEach((item) => {
                             item.renderFn && item.renderFn();
                         });

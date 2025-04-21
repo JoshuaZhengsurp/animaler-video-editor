@@ -9,6 +9,7 @@ interface TrackItemProps {
     scale?: number;
 
     handleDragStart: (clientX: number, track: TrackItem, trackItemRef?: HTMLElement | null) => void;
+    handleDoudleClick: (type: TrackItemType) => void;
 }
 
 const VideoTrackFrames = (frames: VideoFrame[]) => {
@@ -29,7 +30,12 @@ const VideoTrackFrames = (frames: VideoFrame[]) => {
     );
 };
 
-export default function VideoTrackItem({ track, scale = 1, handleDragStart }: TrackItemProps) {
+export default function VideoTrackItem({
+    track,
+    scale = 1,
+    handleDragStart,
+    handleDoudleClick,
+}: TrackItemProps) {
     const [trackFrames, setTrackFrames] = useState<VideoFrame[]>([]);
 
     const getVideoTrackFrame = useVideoStore((s) => s.getVideoTrackFrame);
@@ -73,6 +79,7 @@ export default function VideoTrackItem({ track, scale = 1, handleDragStart }: Tr
                 cursor: isSelected ? 'move' : 'default',
             }}
             onClick={handleTrackClick}
+            onDoubleClick={() => handleDoudleClick(track.type)}
             onMouseDown={(e) => {
                 isSelected &&
                     handleDragStart &&

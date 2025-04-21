@@ -1,6 +1,7 @@
 /**
  * @description 处理canvas 相关方法库
  */
+import { formatTime } from './common';
 import { PER_SECOND } from './const';
 import { TimeLineConfig } from '@/components/VideoTrack/TimeLine/config';
 
@@ -48,14 +49,11 @@ const getGridWidth = (timeLineWidth: number, duration?: number) => {
     };
 };
 
-// let ishasScale = false;
-
 export const drawTimeLine = (
     canvasContext: CanvasRenderingContext2D,
     { duration }: { duration: number },
     timeLineConfig: TimeLineConfig & { width: number; height: number },
 ) => {
-    // const DEV_IS_HAVE_SCALE = 'DEV_IS_HAVE_SCALE';
     const {
         width,
         height,
@@ -73,14 +71,12 @@ export const drawTimeLine = (
         return null;
     }
 
-    // console.log(ishasScale, sessionStorage.getItem(DEV_IS_HAVE_SCALE));
-
     // canvasContext.scale(ratio, ratio);
-    if (canvasContext.__radio__ !== ratio) {
-        // console.log(canvasContext.__radio__);
-        canvasContext.scale(ratio, ratio);
-        canvasContext.__radio__ = ratio;
-    }
+    // if (canvasContext.__radio__ !== ratio) {
+    //     // console.log(canvasContext.__radio__);
+    //     canvasContext.scale(ratio, ratio);
+    //     canvasContext.__radio__ = ratio;
+    // }
     canvasContext.clearRect(0, 0, width, height);
     canvasContext.fillStyle = bgColor;
     canvasContext.fillRect(0, 0, width, height);
@@ -144,9 +140,65 @@ export const drawTimeLine = (
     };
 };
 
-// 格式化时间显示
-const formatTime = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+type TextDrawOptions = Omit<TextTrackItem, 'type'>;
+export const drawText = (canvasContext: CanvasRenderingContext2D, options: TextDrawOptions) => {
+    const { content, playerPosition, style } = options;
+    const {
+        fontSize,
+        color,
+        width,
+        height,
+        fontFamily = 'Arial',
+        fontWeight = 'normal',
+        fontStyle = 'normal',
+        lineHeight = 1.2, // 默认行高为字体大小的1.2倍
+    } = style;
+
+    canvasContext.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
+    canvasContext.fillStyle = color;
+    canvasContext.textBaseline = 'top';
+    // 保存当前状态，以便后续恢复
+    canvasContext.save();
+
+    // 如果指定了宽度，则进行文字换行处理
+    // 针对字符进行换行对于性能来说有一定消耗，考虑使用二分有优化；也需要考虑对这类静态的资源使用缓存
+    if (width) {
+        const text = content;
+        let line = '';
+        let y = playerPosition.y + fontSize * (lineHeight - 1);
+        let charNum = 0;
+
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            const testLine = line + char;
+            const metrics = canvasContext.measureText(testLine);
+            const testWidth = metrics.width;
+            ++charNum;
+
+            if (testWidth > width && charNum > 1) {
+                canvasContext.fillText(line, playerPosition.x, y);
+                line = char;
+                charNum = 1;
+                y += fontSize * lineHeight;
+            } else {
+                line = testLine;
+            }
+        }
+        // 绘制最后一行
+        if (line) {
+            canvasContext.fillText(line, playerPosition.x, y);
+        }
+    } else {
+        // 单行文字
+        canvasContext.fillText(content, playerPosition.x, playerPosition.y);
+    }
+
+    // 如果指定了高度，则裁剪超出部分
+    if (height) {
+        canvasContext.restore();
+        canvasContext.save();
+        canvasContext.beginPath();
+        canvasContext.rect(playerPosition.x, playerPosition.y, width || Infinity, height);
+        canvasContext.clip();
+    }
 };

@@ -8,13 +8,12 @@ interface SiderStore extends Partial<ToolConfig> {
 /**
  * @description 侧边工具栏配置
  */
-export const useSiderStore = create<SiderStore>(set => ({
+export const useSiderStore = create<SiderStore>((set) => ({
     ...initConfig,
-    setToolConfig: toolConfig => {
+    setToolConfig: (toolConfig) => {
         set({
             text: toolConfig.text || '',
             icon: toolConfig.icon || '',
-            component: toolConfig.component || null,
             type: toolConfig.type || toolType.UNKNOWN,
         });
     },

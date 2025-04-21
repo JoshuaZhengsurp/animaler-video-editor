@@ -8,6 +8,7 @@ interface TrackItemProps {
     scale?: number;
 
     handleDragStart: (clientX: number, track: TrackItem, trackItemRef?: HTMLElement | null) => void;
+    handleDoudleClick: (type: TrackItemType) => void;
 }
 
 const ImageTrackFrames = (trackData: ImageTrackItem) => {
@@ -25,7 +26,12 @@ const ImageTrackFrames = (trackData: ImageTrackItem) => {
     );
 };
 
-export default function ImageTrackItem({ track, scale = 1, handleDragStart }: TrackItemProps) {
+export default function ImageTrackItem({
+    track,
+    scale = 1,
+    handleDragStart,
+    handleDoudleClick,
+}: TrackItemProps) {
     const selectTrackId = useVideoTrackStore((s) => s.selectedTrackId);
     const setSelectedTrackId = useVideoTrackStore((s) => s.setSelectedTrackId);
 
@@ -49,6 +55,7 @@ export default function ImageTrackItem({ track, scale = 1, handleDragStart }: Tr
                 cursor: isSelected ? 'move' : 'default',
             }}
             onClick={handleTrackClick}
+            onDoubleClick={() => handleDoudleClick(track.type)}
             onMouseDown={(e) => {
                 isSelected &&
                     handleDragStart &&

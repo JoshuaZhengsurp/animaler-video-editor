@@ -4,7 +4,6 @@ import Tool from './Tool';
 
 import style from './index.module.scss';
 import { useSiderStore } from '@/store/useSiderStore';
-import { useShallow } from 'zustand/react/shallow';
 import { toolType } from './config';
 import Media from './Media';
 import Audio from './Audio';

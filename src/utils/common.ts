@@ -184,3 +184,10 @@ export const blobToBase64 = (blob: Blob) => {
 export const getNanoid = (size: number = 6) => {
     return nanoid(size);
 };
+
+// 格式化时间显示
+export const formatTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+};

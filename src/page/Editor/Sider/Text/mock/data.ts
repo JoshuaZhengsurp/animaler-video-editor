@@ -8,19 +8,19 @@ export const mockTextData = {
             name: '文字1',
             id: 0,
             cover: text_0PNG,
-            content: '请在此处输入文字xxxxxxxxxxxxxxxxxxx',
+            content: '双击音轨后可编辑',
         },
         {
             name: '文字2',
             id: 1,
             cover: text_1PNG,
-            content: '请在此处输入文字',
+            content: '双击音轨后可编辑',
         },
         {
             name: '文字3    ',
             id: 3,
             cover: text_1PNG,
-            content: '请在此处输入文字',
+            content: '双击音轨后可编辑',
         },
     ],
 };

@@ -55,6 +55,7 @@ interface TextTrackItem extends BaseTrackItem {
         fontFamily?: string;
         fontWeight?: string;
         fontStyle?: string;
+        backgroudColor?: string;
     };
 }
 

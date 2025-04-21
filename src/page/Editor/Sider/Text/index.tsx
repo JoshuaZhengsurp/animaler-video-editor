@@ -28,7 +28,7 @@ export default function Text() {
             style: {
                 lineHeight: 1.2,
                 fontSize: 16,
-                color: '#fff',
+                color: '#ffffff',
                 width: textItem.content.length * 16,
             },
         };

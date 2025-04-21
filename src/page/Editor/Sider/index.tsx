@@ -9,9 +9,10 @@ import Media from './Media';
 import Audio from './Audio';
 import Text from './Text';
 import Drawer from './Drawer';
+import TextEditor from './Text/editor';
 
 export default function Sider() {
-    const text = useSiderStore((state) => state.text);
+    // const text = useSiderStore((state) => state.text);
     const type = useSiderStore((state) => state.type);
 
     return (
@@ -24,7 +25,7 @@ export default function Sider() {
                 {type === toolType.AUDIO && <Audio />}
                 {type === toolType.TEXT && <Text />}
                 {type === toolType.DRAWER && <Drawer />}
-                {/* {type === toolType.FILTERS && <Media />}*/}
+                {type === toolType.TEXT_EDITOR && <TextEditor />}
             </div>
         </>
     );

@@ -41,6 +41,21 @@ interface VideoTrackItem {
 
 interface TextTrackItem extends BaseTrackItem {
     type: 'text';
+    content: string;
+    playerPosition: {
+        x: number;
+        y: number;
+    };
+    style: {
+        lineHeight: number;
+        fontSize: number;
+        color: string;
+        width: number;
+        height?: number;
+        fontFamily?: string;
+        fontWeight?: string;
+        fontStyle?: string;
+    };
 }
 
 interface ImageTrackItem extends BaseTrackItem {

@@ -4,28 +4,25 @@ import useVideoTrackStore from '@/store/useVideoTrackStore';
 import { PureLoadingTrack } from './PureLoadingTrack';
 
 interface TrackItemProps {
-    track: ImageTrackItem | TrackItem;
+    track: TextTrackItem | TrackItem;
     scale?: number;
 
     handleDragStart: (clientX: number, track: TrackItem, trackItemRef?: HTMLElement | null) => void;
 }
 
-const ImageTrackFrames = (trackData: ImageTrackItem) => {
+const TextTrackFrames = (trackData: TextTrackItem) => {
     if (!trackData) return null;
 
     return (
         <div className={style['frames-container']}>
-            <div className={style['frame-item']}>
-                <img src={trackData.path} alt='' className={style['frame-image']} />
-            </div>
-            <div className={style['frame-item']}>
-                <img src={trackData.path} alt='' className={style['frame-image']} />
+            <div className={`${style['frame-item']} ${style['frame-item__text']}`}>
+                <span>{trackData.content}</span>
             </div>
         </div>
     );
 };
 
-export default function ImageTrackItem({ track, scale = 1, handleDragStart }: TrackItemProps) {
+export default function TextTrackItem({ track, scale = 1, handleDragStart }: TrackItemProps) {
     const selectTrackId = useVideoTrackStore((s) => s.selectedTrackId);
     const setSelectedTrackId = useVideoTrackStore((s) => s.setSelectedTrackId);
 
@@ -62,7 +59,7 @@ export default function ImageTrackItem({ track, scale = 1, handleDragStart }: Tr
                         width: `${track.trackWidth}px`,
                     }}
                 >
-                    {ImageTrackFrames(track as ImageTrackItem)}
+                    {TextTrackFrames(track as TextTrackItem)}
                     {isSelected && (
                         <>
                             <div className={style['pre-block']} />
@@ -70,7 +67,6 @@ export default function ImageTrackItem({ track, scale = 1, handleDragStart }: Tr
                             <div className={style['track-item-border']} />
                         </>
                     )}
-                    {/* {track.type === 'video' ? renderVideoTrack() : renderAudioTrack()} */}
                 </div>
             ) : (
                 <PureLoadingTrack className={style['track-item']} width={track.trackWidth || 0} />

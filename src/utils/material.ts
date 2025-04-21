@@ -1,4 +1,4 @@
-import { MaterialType, TextMaterial, Transform, Timeline } from '../type/material';
+import { MaterialType, TextMaterial, Transform, Timeline } from '../types/material';
 
 // 默认值配置
 const DEFAULT_TRANSFORM: Transform = {

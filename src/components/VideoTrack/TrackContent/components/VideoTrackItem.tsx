@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import style from './index.module.scss';
 import { useVideoStore } from '@/store/useVideoDataStore';
 import useVideoTrackStore from '@/store/useVideoTrackStore';
-import { useTrackDragger } from '@/hooks/useTrackDragger';
+import { PureLoadingTrack } from './PureLoadingTrack';
 
 interface TrackItemProps {
     track: TrackItem;
@@ -26,16 +26,6 @@ const VideoTrackFrames = (frames: VideoFrame[]) => {
                 </div>
             ))}
         </div>
-    );
-};
-const PureLoadingTrack = (width: number) => {
-    return (
-        <div
-            className={style['track-item']}
-            style={{
-                width: `${width}px`,
-            }}
-        />
     );
 };
 
@@ -107,7 +97,7 @@ export default function VideoTrackItem({ track, scale = 1, handleDragStart }: Tr
                     {/* {track.type === 'video' ? renderVideoTrack() : renderAudioTrack()} */}
                 </div>
             ) : (
-                PureLoadingTrack(track.trackWidth || 0)
+                <PureLoadingTrack className={style['track-item']} width={track.trackWidth || 0} />
             )}
         </div>
     );

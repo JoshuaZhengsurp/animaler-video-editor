@@ -10,6 +10,10 @@ import {
 import useVideoTrackStore from '@/store/useVideoTrackStore';
 import { getVideoFrameIndexByTimestamp } from '@/utils/ffmpeg/utils';
 import { PlayState, useVideoPlayerStore } from '@/store/useVideoPlayerStore';
+import useFrameRender, {
+    genImageFrameRenderTask,
+    genTextFrameRenderTask,
+} from '@/hooks/useFrameRender';
 
 interface PlayFrameOption {
     type: TrackItemType;
@@ -83,102 +87,27 @@ export default function CanvasPlayer(props: IProps) {
         return [width, height, 0, 0];
     }, [width, height, videoResolution]);
 
+    const { renderDefaultFrame, renderFrame } = useFrameRender({
+        canvasRef,
+        offscreenCanvasRef,
+        offscreenCtxRef,
+        width,
+        height,
+        frameWidth,
+        frameHeight,
+        centerX,
+        centerY,
+    });
+
     const clearTimer = () => {
         frameIndex.current = 1;
         frameTimer.current && clearInterval(frameTimer.current);
         frameTimer.current = undefined;
     };
 
-    const renderFrame = async (playFrame: Blob | Array<PlayFrameOption>) => {
-        if (Array.isArray(playFrame)) {
-            const ctx = canvasRef.current?.getContext('2d');
-            const offscreenCtx = offscreenCtxRef.current;
-
-            // 合成帧然后渲染
-            if (ctx && offscreenCtx) {
-                // 清除离屏canvas
-                offscreenCtx.clearRect(0, 0, width, height);
-
-                // 使用Promise.all等待所有图片加载完成
-                const drawPromises = playFrame.map((frameItem) => {
-                    return new Promise<{ renderFn: () => void }>((resolve) => {
-                        if (frameItem.type === 'video') {
-                            const img = new Image();
-                            img.src = URL.createObjectURL(frameItem.frame as Blob);
-                            img.onload = () => {
-                                resolve({
-                                    renderFn: () => {
-                                        offscreenCtx.drawImage(
-                                            img,
-                                            centerX,
-                                            centerY,
-                                            frameWidth,
-                                            frameHeight,
-                                        );
-                                        URL.revokeObjectURL(img.src);
-                                    },
-                                });
-                            };
-                        } else if (frameItem.type === 'image') {
-                            const img = new Image();
-                            img.src = frameItem.frame as string;
-                            img.onload = () => {
-                                resolve({
-                                    renderFn: () => {
-                                        const { playerPosition, size } = frameItem.extra!;
-                                        offscreenCtx.drawImage(
-                                            img,
-                                            playerPosition.x,
-                                            playerPosition.y,
-                                            size.width,
-                                            size.height,
-                                        );
-                                    },
-                                });
-                            };
-                        }
-                    });
-                });
-
-                // 等待所有图片加载完成后，一次性绘制到主canvas
-                Promise.all(drawPromises)
-                    .then((res) => {
-                        res.forEach((item) => {
-                            item.renderFn && item.renderFn();
-                        });
-                    })
-                    .then(() => {
-                        ctx.clearRect(0, 0, width, height);
-                        ctx.drawImage(offscreenCanvasRef.current!, 0, 0);
-                    });
-            }
-        } else {
-            const img = new Image();
-            img.src = URL.createObjectURL(playFrame);
-            img.onload = () => {
-                const ctx = canvasRef.current?.getContext('2d');
-                if (ctx) {
-                    ctx.clearRect(0, 0, width, height);
-                    ctx.drawImage(img, centerX, centerY, frameWidth, frameHeight);
-                }
-                URL.revokeObjectURL(img.src);
-            };
-        }
-    };
-
-    const renderDefaultFrame = async () => {
-        const ctx = canvasRef.current?.getContext('2d');
-        if (ctx) {
-            ctx.clearRect(centerX, centerY, frameWidth, frameHeight);
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, width, height);
-        }
-    };
-
     // startPFrameTimestamp 导轨切片实际
     const genFirstPlayFrame = async (time: number) => {
         // console.log('genFirstPlayFrame', videoFile, canvasRef.current, time, duration);
-        // debugger;
         if (!canvasRef.current || !videoFile) return null;
         if (time * 1000 > duration) {
             renderDefaultFrame();
@@ -194,36 +123,27 @@ export default function CanvasPlayer(props: IProps) {
         }
 
         const firstFramePromise = playingTrackList.map(
-            (playingTrackItem: TrackItem | ImageTrackItem) => {
+            (playingTrackItem: TrackItem | ImageTrackItem | TextTrackItem) => {
                 if (playingTrackItem.type === 'image') {
-                    return new Promise<PlayFrameOption>((resolve) => {
-                        resolve({
-                            type: playingTrackItem.type,
-                            frame: playingTrackItem.path,
-                            extra: {
-                                playerPosition: (playingTrackItem as ImageTrackItem).playerPosition,
-                                size: (playingTrackItem as ImageTrackItem).size,
-                            },
-                        });
-                    });
+                    return genImageFrameRenderTask(playingTrackItem as ImageTrackItem);
+                } else if (playingTrackItem.type === 'text') {
+                    return genTextFrameRenderTask(playingTrackItem as TextTrackItem);
                 } else {
+                    const playTimestamp =
+                        fixFloat(playingTrackItem.playStartTime / 1000, 3) +
+                        (time - fixFloat(playingTrackItem.startTime / 1000, 3)); // 单位为s
+
+                    // 需要对curPlayTime时间进行细微修正（-1/fps~1/fps），切换音轨切片时会有误差，导致获取切片时有问题
+                    const { fixedTimestamp } = fixPlayerFrameTime(
+                        playTimestamp * 1000,
+                        frameInterval,
+                    );
+                    curPlayTime.current += fixedTimestamp - playTimestamp * 1000;
+                    const { startPFrameTimestamp, frameIndex: FixedFrameIndex } =
+                        getVideoFrameIndexByTimestamp(fixedTimestamp / 1000, fps);
+                    frameIndex.current = FixedFrameIndex;
                     return new Promise<PlayFrameOption>(async (resolve) => {
-                        const playTimestamp =
-                            fixFloat(playingTrackItem.playStartTime / 1000, 3) +
-                            (time - fixFloat(playingTrackItem.startTime / 1000, 3)); // 单位为s
-
-                        // 需要对curPlayTime时间进行细微修正（-1/fps~1/fps），切换音轨切片时会有误差，导致获取切片时有问题
-                        const { fixedTimestamp } = fixPlayerFrameTime(
-                            playTimestamp * 1000,
-                            frameInterval,
-                        );
-                        curPlayTime.current += fixedTimestamp - playTimestamp * 1000;
-                        const { startPFrameTimestamp, frameIndex: FixedFrameIndex } =
-                            getVideoFrameIndexByTimestamp(fixedTimestamp / 1000, fps);
-                        frameIndex.current = FixedFrameIndex;
-
                         // console.log('genFirstPlayFrame FixedFrameIndex', FixedFrameIndex, time, playTimestamp);
-
                         const { firstFrame } = await ffmpegManager.extractFrame({
                             inputFile: playingTrackItem.path,
                             time: startPFrameTimestamp,
@@ -274,32 +194,30 @@ export default function CanvasPlayer(props: IProps) {
                 if (playingTrackList.length) {
                     // 渲染track
                     const framePromise = playingTrackList.map(
-                        (playingTrackItem: TrackItem | ImageTrackItem, index) => {
+                        (playingTrackItem: TrackItem | ImageTrackItem | TextTrackItem, index) => {
                             if (playingTrackItem.type === 'image') {
-                                return new Promise<PlayFrameOption>((resolve) => {
-                                    resolve({
-                                        type: playingTrackItem.type,
-                                        frame: playingTrackItem.path,
-                                        extra: {
-                                            playerPosition: (playingTrackItem as ImageTrackItem)
-                                                .playerPosition,
-                                            size: (playingTrackItem as ImageTrackItem).size,
-                                        },
-                                    });
-                                });
+                                return genImageFrameRenderTask(playingTrackItem as ImageTrackItem);
+                            } else if (playingTrackItem.type === 'text') {
+                                return genTextFrameRenderTask(playingTrackItem as TextTrackItem);
                             } else {
-                                let time = ret?.startPFrameTimestamp || ret?.[index];
-                                // console.log(ret, time);
-                                return new Promise<PlayFrameOption>(async (resolve) => {
-                                    const frameBlob = await ffmpegManager.getPlayFrame({
-                                        inputFile: playingTrackItem.path,
-                                        time,
-                                        frameIndex: ++frameIndex.current,
-                                    });
-                                    resolve({
-                                        type: playingTrackItem.type,
-                                        frame: frameBlob,
-                                    });
+                                const frameTime = Array.isArray(ret)
+                                    ? ret[index]
+                                    : (ret as { startPFrameTimestamp: number })
+                                          .startPFrameTimestamp;
+                                return new Promise<PlayFrameOption>(async (resolve, reject) => {
+                                    try {
+                                        const frameBlob = await ffmpegManager.getPlayFrame({
+                                            inputFile: playingTrackItem.path,
+                                            time: frameTime,
+                                            frameIndex: ++frameIndex.current,
+                                        });
+                                        resolve({
+                                            type: playingTrackItem.type,
+                                            frame: frameBlob,
+                                        });
+                                    } catch (err) {
+                                        reject(err);
+                                    }
                                 });
                             }
                         },

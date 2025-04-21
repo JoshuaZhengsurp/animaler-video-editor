@@ -3,7 +3,7 @@ import im2PNG from '../assets/im2.png';
 import im3PNG from '../assets/im3.jpg';
 
 export const mockImgData = {
-    type: 'text',
+    type: 'image',
     items: [
         {
             name: 'im1',

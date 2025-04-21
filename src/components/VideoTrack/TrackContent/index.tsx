@@ -3,6 +3,7 @@ import TrackItem from './components/VideoTrackItem';
 import ImageTrackItem from './components/ImageTrackItem';
 import styles from './index.module.scss';
 import { useTrackDragger } from '@/hooks/useTrackDragger';
+import TextTrackItem from './components/TextTrackItem';
 
 interface VideoTrackProps {
     tracks: TrackItem[];
@@ -22,25 +23,40 @@ interface TrackListProps {
 const TrackList = ({ width, trackList, scale }: TrackListProps) => {
     const { handleDragStart } = useTrackDragger(trackList);
 
+    const renderTrackItem = (track: TrackItem, type: TrackItemType) => {
+        if (type === 'image') {
+            return (
+                <ImageTrackItem
+                    track={track}
+                    scale={scale}
+                    key={track.id}
+                    handleDragStart={handleDragStart}
+                />
+            );
+        } else if (type === 'text') {
+            return (
+                <TextTrackItem
+                    track={track}
+                    scale={scale}
+                    key={track.id}
+                    handleDragStart={handleDragStart}
+                />
+            );
+        } else {
+            return (
+                <TrackItem
+                    track={track}
+                    scale={scale}
+                    key={track.id}
+                    handleDragStart={handleDragStart}
+                />
+            );
+        }
+    };
+
     return (
         <div className={styles['track-list']} style={{ minWidth: '100%', width: `${width}px` }}>
-            {trackList.map((track) =>
-                track.type === 'image' ? (
-                    <ImageTrackItem
-                        track={track}
-                        scale={scale}
-                        key={track.id}
-                        handleDragStart={handleDragStart}
-                    />
-                ) : (
-                    <TrackItem
-                        track={track}
-                        scale={scale}
-                        key={track.id}
-                        handleDragStart={handleDragStart}
-                    />
-                ),
-            )}
+            {trackList.map((track) => renderTrackItem(track, track.type))}
         </div>
     );
 };

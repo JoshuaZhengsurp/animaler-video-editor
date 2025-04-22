@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { getNanoid } from '@/utils/common';
+import { eventbus } from '@/utils/pubsub';
+import { TRACK_UPDATE_EVENT } from '@/utils/const';
 
 const playingTrackListWeakset = new Set<TrackItem>();
 
@@ -116,6 +118,7 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
                 console.log('set tracks', s.tracks, idx, trackItem);
                 const newTracks = [...s.tracks, trackItem];
                 updateDuration(newTracks);
+                setTimeout(() => eventbus.emit(TRACK_UPDATE_EVENT, trackItem.id));
                 return { tracks: newTracks, selectedTrackId: trackItem.id };
             });
             // Then update playingTrackList after tracks are updated
@@ -129,6 +132,7 @@ const useVideoTrackStore = create<VideoTrackState>((set, get) => ({
                 s.tracks[idx] = trackItem;
                 const newTracks = [...s.tracks];
                 updateDuration(newTracks);
+                setTimeout(() => eventbus.emit(TRACK_UPDATE_EVENT, trackItem.id));
                 return { tracks: newTracks, selectedTrackId: trackItem.id };
             });
             // Then update playingTrackList after tracks are updated

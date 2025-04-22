@@ -1,47 +1,29 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import style from './index.module.scss';
 import useVideoTrackStore from '@/store/useVideoTrackStore';
 import { PureLoadingTrack } from './PureLoadingTrack';
-import { TRACK_ITEM_HEIGHT } from '@/utils/const';
 
 interface TrackItemProps {
-    track: ImageTrackItem | TrackItem;
+    track: TextTrackItem | TrackItem;
     scale?: number;
 
     handleDragStart: (clientX: number, track: TrackItem, trackItemRef?: HTMLElement | null) => void;
     handleDoudleClick: (type: TrackItemType) => void;
 }
 
-// 考虑使用canvas来绘制，减低渲染压力
-const ImageTrackFrames = ({ trackData }: { trackData: ImageTrackItem }) => {
-    if (!trackData) return <></>;
+const TextTrackFrames = (trackData: TextTrackItem) => {
+    if (!trackData) return null;
 
-    const Frames = useMemo(() => {
-        const { size, trackWidth } = trackData;
-        if (trackWidth) {
-            const frameNum = Math.ceil(
-                trackWidth / ((TRACK_ITEM_HEIGHT / size.realHeight) * size.realWidth),
-            );
-            return Array.from({ length: frameNum }, (_, index) => {
-                const frameWidth =
-                    (TRACK_ITEM_HEIGHT / trackData.size.realHeight) * trackData.size.realWidth;
-                const frameStyle = {
-                    width: `${frameWidth}px`,
-                    height: `${TRACK_ITEM_HEIGHT}px`,
-                    backgroundImage: `url(${trackData.path})`,
-                    backgroundSize: `${frameWidth}px ${TRACK_ITEM_HEIGHT}px`,
-                    backgroundPosition: `${-index * frameWidth}px 0`,
-                };
-                return <div key={index} className={style['frame-item']} style={frameStyle} />;
-            });
-        }
-        return <></>;
-    }, [trackData]);
-
-    return <div className={style['frames-container']}>{Frames}</div>;
+    return (
+        <div className={style['frames-container']}>
+            <div className={`${style['frame-item']} ${style['frame-item__text']}`}>
+                <span>{trackData.content}</span>
+            </div>
+        </div>
+    );
 };
 
-export default function ImageTrackItem({
+export default function TextTrackItem({
     track,
     scale = 1,
     handleDragStart,
@@ -84,7 +66,7 @@ export default function ImageTrackItem({
                         width: `${track.trackWidth}px`,
                     }}
                 >
-                    <ImageTrackFrames trackData={track as ImageTrackItem} />
+                    {TextTrackFrames(track as TextTrackItem)}
                     {isSelected && (
                         <>
                             <div className={style['pre-block']} />
@@ -92,7 +74,6 @@ export default function ImageTrackItem({
                             <div className={style['track-item-border']} />
                         </>
                     )}
-                    {/* {track.type === 'video' ? renderVideoTrack() : renderAudioTrack()} */}
                 </div>
             ) : (
                 <PureLoadingTrack className={style['track-item']} width={track.trackWidth || 0} />

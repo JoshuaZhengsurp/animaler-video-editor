@@ -1,8 +1,11 @@
-import React, { Fragment, useMemo, useRef } from 'react';
+import React, { Fragment, useCallback, useMemo, useRef } from 'react';
 import TrackItem from './components/VideoTrackItem';
 import ImageTrackItem from './components/ImageTrackItem';
 import styles from './index.module.scss';
 import { useTrackDragger } from '@/hooks/useTrackDragger';
+import TextTrackItem from './components/TextTrackItem';
+import { useSiderStore } from '@/store/useSiderStore';
+import { hideToolConfigMap, ToolEditorMap } from '@/page/Editor/Sider/config';
 
 interface VideoTrackProps {
     tracks: TrackItem[];
@@ -21,25 +24,47 @@ interface TrackListProps {
  */
 const TrackList = ({ width, trackList, scale }: TrackListProps) => {
     const { handleDragStart } = useTrackDragger(trackList);
+    const setToolConfig = useSiderStore((s) => s.setToolConfig);
+
+    const handleDoudleClickToEdit = (type: TrackItemType) => {
+        const toolEditorType = ToolEditorMap[type];
+        if (toolEditorType) {
+            setToolConfig(hideToolConfigMap[toolEditorType]!);
+        }
+    };
+
+    const renderTrackItem = (
+        type: TrackItemType,
+        key: string,
+        trackItemProps: {
+            track: TrackItem;
+            scale: number;
+            handleDragStart: (
+                clientX: number,
+                track: TrackItem,
+                trackItemRef?: HTMLElement | null,
+            ) => void;
+            handleDoudleClick: (type: TrackItemType) => void;
+        },
+    ) => {
+        if (type === 'image') {
+            return <ImageTrackItem key={key} {...trackItemProps} />;
+        } else if (type === 'text') {
+            return <TextTrackItem key={key} {...trackItemProps} />;
+        } else {
+            return <TrackItem key={key} {...trackItemProps} />;
+        }
+    };
 
     return (
         <div className={styles['track-list']} style={{ minWidth: '100%', width: `${width}px` }}>
             {trackList.map((track) =>
-                track.type === 'image' ? (
-                    <ImageTrackItem
-                        track={track}
-                        scale={scale}
-                        key={track.id}
-                        handleDragStart={handleDragStart}
-                    />
-                ) : (
-                    <TrackItem
-                        track={track}
-                        scale={scale}
-                        key={track.id}
-                        handleDragStart={handleDragStart}
-                    />
-                ),
+                renderTrackItem(track.type, track.id, {
+                    track,
+                    scale,
+                    handleDragStart,
+                    handleDoudleClick: handleDoudleClickToEdit,
+                }),
             )}
         </div>
     );

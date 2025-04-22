@@ -2,13 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import style from './index.module.scss';
 import { useVideoStore } from '@/store/useVideoDataStore';
 import useVideoTrackStore from '@/store/useVideoTrackStore';
-import { useTrackDragger } from '@/hooks/useTrackDragger';
+import { PureLoadingTrack } from './PureLoadingTrack';
 
 interface TrackItemProps {
     track: TrackItem;
     scale?: number;
 
     handleDragStart: (clientX: number, track: TrackItem, trackItemRef?: HTMLElement | null) => void;
+    handleDoudleClick: (type: TrackItemType) => void;
 }
 
 const VideoTrackFrames = (frames: VideoFrame[]) => {
@@ -28,18 +29,13 @@ const VideoTrackFrames = (frames: VideoFrame[]) => {
         </div>
     );
 };
-const PureLoadingTrack = (width: number) => {
-    return (
-        <div
-            className={style['track-item']}
-            style={{
-                width: `${width}px`,
-            }}
-        />
-    );
-};
 
-export default function VideoTrackItem({ track, scale = 1, handleDragStart }: TrackItemProps) {
+export default function VideoTrackItem({
+    track,
+    scale = 1,
+    handleDragStart,
+    handleDoudleClick,
+}: TrackItemProps) {
     const [trackFrames, setTrackFrames] = useState<VideoFrame[]>([]);
 
     const getVideoTrackFrame = useVideoStore((s) => s.getVideoTrackFrame);
@@ -83,6 +79,7 @@ export default function VideoTrackItem({ track, scale = 1, handleDragStart }: Tr
                 cursor: isSelected ? 'move' : 'default',
             }}
             onClick={handleTrackClick}
+            onDoubleClick={() => handleDoudleClick(track.type)}
             onMouseDown={(e) => {
                 isSelected &&
                     handleDragStart &&
@@ -107,7 +104,7 @@ export default function VideoTrackItem({ track, scale = 1, handleDragStart }: Tr
                     {/* {track.type === 'video' ? renderVideoTrack() : renderAudioTrack()} */}
                 </div>
             ) : (
-                PureLoadingTrack(track.trackWidth || 0)
+                <PureLoadingTrack className={style['track-item']} width={track.trackWidth || 0} />
             )}
         </div>
     );

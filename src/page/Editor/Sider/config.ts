@@ -11,20 +11,25 @@ export enum toolType {
     DRAWER,
     FILTERS,
     TEXT,
+    TEXT_EDITOR,
+    DRAWER_EDITOR,
 }
+
+export const ToolEditorMap: Record<string, toolType> = {
+    image: toolType.DRAWER_EDITOR,
+    text: toolType.TEXT_EDITOR,
+};
 
 export interface ToolConfig {
     text: string;
     type: toolType;
     icon?: string;
-    component?: (() => JSX.Element) | null;
 }
 
 export const toolConfigList: ToolConfig[] = [
     {
         type: toolType.VIDEO,
         text: '媒体库',
-        component: Media,
     },
     {
         type: toolType.DRAWER,
@@ -43,5 +48,16 @@ export const toolConfigList: ToolConfig[] = [
         text: '滤波',
     },
 ];
+
+export const hideToolConfigMap: Partial<Record<toolType, ToolConfig>> = {
+    [toolType.TEXT_EDITOR]: {
+        type: toolType.TEXT_EDITOR,
+        text: '文字编辑',
+    },
+    [toolType.DRAWER_EDITOR]: {
+        type: toolType.DRAWER_EDITOR,
+        text: '图片编辑',
+    },
+};
 
 export const initConfig = toolConfigList[0];

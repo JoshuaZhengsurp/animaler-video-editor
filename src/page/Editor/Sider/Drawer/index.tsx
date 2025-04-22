@@ -34,6 +34,7 @@ export default function Drawer() {
             resourceId: String(imageItem.id),
             trackIndex: 0,
             startLeft: 0,
+            opacity: 1,
             playerPosition: {
                 x: 0,
                 y: 0,

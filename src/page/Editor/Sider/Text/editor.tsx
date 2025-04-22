@@ -3,6 +3,9 @@ import { Select, InputNumber, Input } from 'antd';
 import { TypeBold, TypeItalic } from '@styled-icons/bootstrap';
 import style from './editor.module.scss';
 import useVideoTrackStore from '@/store/useVideoTrackStore';
+import { debounce } from 'lodash';
+import { eventbus } from '@/utils/pubsub';
+import { TRACK_UPDATE_EVENT } from '@/utils/const';
 
 const fontFamilies = [
     { value: 'Open Sans', label: 'Open Sans' },
@@ -44,28 +47,42 @@ export default function TextEditor() {
     const hasBackground = !!(editedTrackItem as TextTrackItem)?.style?.backgroudColor || false;
     const playerPosition = (editedTrackItem as TextTrackItem)?.playerPosition || { x: 0, y: 0 };
 
-    const handleUpdateTextTrackStyle = (path: string[], value: any) => {
-        let curPtr = editedTrackItem;
+    const debounceUpdateTrackItem = debounce((newTrackItem: TrackItem) => {
+        addTrackItem(newTrackItem as TrackItem);
+        setEditedTrackItem(newTrackItem);
+    }, 8);
+
+    const handleUpdateTextTrackStyle = (path: Array<keyof TextTrackItem | string>, value: any) => {
+        if (!editedTrackItem) return;
+
+        let curPtr: any = editedTrackItem;
         for (let i = 0; i < path.length - 1; ++i) {
             curPtr && (curPtr = curPtr[path[i]]);
         }
+
         curPtr && (curPtr[path[path.length - 1]] = value);
-        addTrackItem(editedTrackItem as TrackItem);
-        setEditedTrackItem(() => {
-            if (editedTrackItem) {
-                return { ...editedTrackItem };
+        debounceUpdateTrackItem({ ...editedTrackItem } as TrackItem);
+    };
+
+    const handleTrackUpdate = (trackId: string) => {
+        if (selectedTrackId === trackId) {
+            const trackItem = getTrackItem(selectedTrackId);
+            if (trackItem) {
+                setEditedTrackItem(trackItem);
             }
-            return null;
-        });
+        }
     };
 
     useEffect(() => {
-        console.log('selectedTrackId');
-        const trackItem = getTrackItem(selectedTrackId);
-        if (trackItem) {
-            setEditedTrackItem(trackItem);
-        }
+        handleTrackUpdate(selectedTrackId);
     }, [selectedTrackId]);
+
+    useEffect(() => {
+        eventbus.on(TRACK_UPDATE_EVENT, handleTrackUpdate);
+        return () => {
+            eventbus.off(TRACK_UPDATE_EVENT, handleTrackUpdate);
+        };
+    }, []);
 
     return (
         <div className={style['editor']}>
@@ -151,7 +168,7 @@ export default function TextEditor() {
                             <InputNumber
                                 id='text-width'
                                 className={style['text-width-input']}
-                                value={(editedTrackItem as TextTrackItem)?.style.width || 0}
+                                value={(editedTrackItem as TextTrackItem)?.style?.width || 0}
                                 onChange={(value) =>
                                     handleUpdateTextTrackStyle(['style', 'width'], value)
                                 }

@@ -3,6 +3,9 @@ import { InputNumber, Upload, Button } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import style from './editor.module.scss';
 import useVideoTrackStore from '@/store/useVideoTrackStore';
+import { debounce } from 'lodash';
+import { eventbus } from '@/utils/pubsub';
+import { TRACK_UPDATE_EVENT } from '@/utils/const';
 
 /**
  * @todo 仿照TextEditor组件，完成ImageEditor组件
@@ -21,6 +24,7 @@ const defaultImageConfig = {
         y: 0,
     },
     opacity: 1,
+    duration: 3000,
 };
 
 export default function ImageEditor() {
@@ -35,11 +39,17 @@ export default function ImageEditor() {
     const playerPosition =
         (editedTrackItem as ImageTrackItem)?.playerPosition || defaultImageConfig.playerPosition;
     const opacity = (editedTrackItem as ImageTrackItem)?.opacity || defaultImageConfig.opacity;
+    const duration = (editedTrackItem as ImageTrackItem)?.duration || defaultImageConfig.duration;
 
-    const handleUpdateImageTrack = (path: string[], value: any) => {
+    const debounceUpdateTrackItem = debounce((newTrackItem: TrackItem) => {
+        addTrackItem(newTrackItem as TrackItem);
+        setEditedTrackItem(newTrackItem);
+    }, 8);
+
+    const handleUpdateImageTrack = (path: Array<keyof ImageTrackItem | string>, value: any) => {
         if (!editedTrackItem) return;
 
-        const newTrackItem = { ...editedTrackItem };
+        const newTrackItem = editedTrackItem;
         let current: any = newTrackItem;
 
         // 遍历路径直到倒数第二个元素
@@ -52,9 +62,7 @@ export default function ImageEditor() {
 
         // 设置最后一个属性的值
         current[path[path.length - 1]] = value;
-
-        addTrackItem(newTrackItem as TrackItem);
-        setEditedTrackItem(newTrackItem);
+        debounceUpdateTrackItem({ ...newTrackItem } as TrackItem);
     };
 
     // 处理图片上传
@@ -82,13 +90,26 @@ export default function ImageEditor() {
         return false; // 阻止默认上传行为
     };
 
+    const handleTrackUpdate = (trackId: string) => {
+        if (selectedTrackId === trackId) {
+            const trackItem = getTrackItem(selectedTrackId);
+            if (trackItem) {
+                setEditedTrackItem(trackItem);
+            }
+        }
+    };
+
     // 监听选中的 track 变化
     useEffect(() => {
-        const trackItem = getTrackItem(selectedTrackId);
-        if (trackItem) {
-            setEditedTrackItem(trackItem);
-        }
+        handleTrackUpdate(selectedTrackId);
     }, [selectedTrackId]);
+
+    useEffect(() => {
+        eventbus.on(TRACK_UPDATE_EVENT, handleTrackUpdate);
+        return () => {
+            eventbus.off(TRACK_UPDATE_EVENT, handleTrackUpdate);
+        };
+    }, []);
 
     return (
         <div className={style['editor']}>
@@ -150,7 +171,6 @@ export default function ImageEditor() {
                             onChange={(value) =>
                                 handleUpdateImageTrack(['playerPosition', 'x'], value)
                             }
-                            min={0}
                             controls={false}
                         />
                     </div>
@@ -165,7 +185,6 @@ export default function ImageEditor() {
                             onChange={(value) =>
                                 handleUpdateImageTrack(['playerPosition', 'y'], value)
                             }
-                            min={0}
                             controls={false}
                         />
                     </div>
@@ -185,6 +204,22 @@ export default function ImageEditor() {
                             min={0}
                             max={1}
                             step={0.1}
+                            controls={false}
+                        />
+                    </div>
+                </div>
+                <div className={style['duration-control']}>
+                    <div className={style['control-item']}>
+                        <label htmlFor='duration' className={style['control-label']}>
+                            duration
+                        </label>
+                        <InputNumber
+                            id='duration'
+                            className={style['control-input']}
+                            value={duration}
+                            onChange={(value) => handleUpdateImageTrack(['duration'], value)}
+                            min={0}
+                            step={1}
                             controls={false}
                         />
                     </div>

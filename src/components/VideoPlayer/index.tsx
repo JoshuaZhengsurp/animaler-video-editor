@@ -129,21 +129,26 @@ export default function CanvasPlayer(props: IProps) {
                 } else if (playingTrackItem.type === 'text') {
                     return genTextFrameRenderTask(playingTrackItem as TextTrackItem);
                 } else {
-                    const playTimestamp =
-                        fixFloat(playingTrackItem.playStartTime / 1000, 3) +
-                        (time - fixFloat(playingTrackItem.startTime / 1000, 3)); // 单位为s
-
-                    // 需要对curPlayTime时间进行细微修正（-1/fps~1/fps），切换音轨切片时会有误差，导致获取切片时有问题
-                    const { fixedTimestamp } = fixPlayerFrameTime(
-                        playTimestamp * 1000,
-                        frameInterval,
-                    );
-                    curPlayTime.current += fixedTimestamp - playTimestamp * 1000;
-                    const { startPFrameTimestamp, frameIndex: FixedFrameIndex } =
-                        getVideoFrameIndexByTimestamp(fixedTimestamp / 1000, fps);
-                    frameIndex.current = FixedFrameIndex;
                     return new Promise<PlayFrameOption>(async (resolve) => {
-                        // console.log('genFirstPlayFrame FixedFrameIndex', FixedFrameIndex, time, playTimestamp);
+                        const playTimestamp =
+                            fixFloat(playingTrackItem.playStartTime / 1000, 3) +
+                            (time - fixFloat(playingTrackItem.startTime / 1000, 3)); // 单位为s
+
+                        // 需要对curPlayTime时间进行细微修正（-1/fps~1/fps），切换音轨切片时会有误差，导致获取切片时有问题
+                        const { fixedTimestamp } = fixPlayerFrameTime(
+                            playTimestamp * 1000,
+                            frameInterval,
+                        );
+                        curPlayTime.current += fixedTimestamp - playTimestamp * 1000;
+                        const { startPFrameTimestamp, frameIndex: FixedFrameIndex } =
+                            getVideoFrameIndexByTimestamp(fixedTimestamp / 1000, fps);
+                        frameIndex.current = FixedFrameIndex;
+                        // console.log(
+                        //     'genFirstPlayFrame FixedFrameIndex',
+                        //     FixedFrameIndex,
+                        //     time,
+                        //     playTimestamp,
+                        // );
                         const { firstFrame } = await ffmpegManager.extractFrame({
                             inputFile: playingTrackItem.path,
                             time: startPFrameTimestamp,
@@ -188,7 +193,7 @@ export default function CanvasPlayer(props: IProps) {
         // console.log('genPlayFrame', time, playingTrackList);
 
         // 确保旧的定时器被清理了（！！！非常重要）
-        frameTimer.current && clearTimer();
+        frameTimer.current && clearInterval(frameTimer.current);
         frameTimer.current = setInterval(async () => {
             try {
                 if (playingTrackList.length) {
@@ -204,6 +209,11 @@ export default function CanvasPlayer(props: IProps) {
                                     ? ret[index]
                                     : (ret as { startPFrameTimestamp: number })
                                           .startPFrameTimestamp;
+                                // console.log(
+                                //     'genFirstPlayFrame genPlayFrame',
+                                //     frameTime,
+                                //     frameIndex.current,
+                                // );
                                 return new Promise<PlayFrameOption>(async (resolve, reject) => {
                                     try {
                                         const frameBlob = await ffmpegManager.getPlayFrame({

@@ -111,7 +111,7 @@ export default function TextEditor() {
                             type='color'
                             title='Text color'
                             aria-label='Text color'
-                            value={(editedTrackItem as TextTrackItem)?.style.color || '#ffffff'}
+                            value={(editedTrackItem as TextTrackItem)?.style?.color || '#ffffff'}
                             onChange={(e) =>
                                 handleUpdateTextTrackStyle(
                                     ['style', 'color'],

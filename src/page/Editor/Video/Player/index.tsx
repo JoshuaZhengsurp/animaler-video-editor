@@ -51,7 +51,7 @@ export default function VideoPlayer(props: IProps) {
                 <CanvasPlayer
                     width={canvasPlayerWH[0]}
                     height={canvasPlayerWH[1]}
-                    videoResolution={mainVideo?.resolution}
+                    videoResolution={mainVideo?.resolution!}
                     videoFile={mainVideo?.path || ''}
                 />
             )}

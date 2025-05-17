@@ -36,7 +36,7 @@ export interface VideoItem {
 interface VideoInfo {
     origin: string;
     type: string;
-    data: Uint8Array<ArrayBuffer> | string;
+    data: any;
 }
 
 interface VideoStore {
@@ -90,6 +90,20 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
                     parseVideoResolution(getVideoStreamInfo(info, 'Video')?.[1]),
                 );
 
+                const getWidthHeightString = (videoInfo: any[]) => {
+                    for(let i = 0;i<videoInfo.length;++i) {
+                        const info = videoInfo[i];
+                        if (typeof info === 'string') {
+                            const infoSplit = info.split('x');
+                            if (infoSplit.length===2 && (!isNaN(Number(infoSplit[0]))) && (!isNaN(Number(infoSplit[1])))){
+                                return info
+                            }
+                        }
+                    }
+                    return '';
+                }
+
+                console.log('getWidthHeightString', getWidthHeightString(getVideoStreamInfo(info, 'Video'))||'852x480');
                 const videoItem: VideoItem = {
                     id,
                     name: fileName,
@@ -99,7 +113,7 @@ export const useVideoStore = create<VideoStore>((set, get) => ({
                     suffix: fileSuffix,
                     info,
                     duration: formatDurationTime(info?.input?.Duration),
-                    resolution: parseVideoResolution(getVideoStreamInfo(info, 'Video')?.[1]),
+                    resolution: parseVideoResolution(getWidthHeightString(getVideoStreamInfo(info, 'Video'))||'852x480'),
                     status: VideoLoadStatus.DONE,
                 };
                 const videos = [videoItem, ...get().videos] as VideoItem[];

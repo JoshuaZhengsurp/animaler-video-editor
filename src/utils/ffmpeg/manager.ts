@@ -41,15 +41,18 @@ class FFmpegManager {
     /* 初始配置文件 */
     async init() {
         try {
-            const baseURL = import.meta.env.VITE_APP_BASE_FFMPEG_URL;
-            // const baseURL = 'https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/esm';
+            // const baseURL = import.meta.env.VITE_APP_BASE_FFMPEG_URL;
+            const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm';
 
             this.showLog();
 
+            const workerURL = '';
+            // const workerURL = await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript');
+
             await this.ffmpeg.load({
                 coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-                workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript'),
                 wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+                workerURL,
             });
             await this.mkdirList(this.resourcePath);
             this.isLoading = true;
@@ -114,7 +117,8 @@ class FFmpegManager {
 
         try {
             if (originType === 'LOCAL') {
-                await ffmpeg.writeFile(inputFile, options.uri as Uint8Array<ArrayBuffer>);
+                // ts-ignore
+                await ffmpeg.writeFile(inputFile, options.uri as any);
             } else {
                 const videoURL = options.uri as string;
                 const videoData = await fetchFile(videoURL);
@@ -125,11 +129,14 @@ class FFmpegManager {
 
             await ffmpeg.exec(commands, 1200000);
 
+            // console.log('input', inputFile);
+            // debugger;
+
             const fileData = await ffmpeg.readFile(outputFile);
-            const data = new Uint8Array(fileData as ArrayBuffer);
+            const data = new Uint8Array(fileData as any);
             // console.log('result finally', this.metadata);
-            // const list = await this.ffmpeg.listDir(this.resourcePath.resourcePath);
-            // console.log('list', list);
+            const list = await this.ffmpeg.listDir(this.resourcePath.resourcePath);
+            console.log('list', list);
             return {
                 data,
                 id: this.currentTranVideoId,
@@ -207,7 +214,7 @@ class FFmpegManager {
                 fps,
             );
 
-            // console.log('commands', commands);
+            console.log('command', commands);
 
             await this.ffmpeg.exec(commands);
 

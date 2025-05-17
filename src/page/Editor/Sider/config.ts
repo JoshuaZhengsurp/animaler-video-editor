@@ -43,10 +43,10 @@ export const toolConfigList: ToolConfig[] = [
         type: toolType.AUDIO,
         text: '音频库',
     },
-    {
-        type: toolType.FILTERS,
-        text: '滤波',
-    },
+    // {
+    //     type: toolType.FILTERS,
+    //     text: '滤波',
+    // },
 ];
 
 export const hideToolConfigMap: Partial<Record<toolType, ToolConfig>> = {
